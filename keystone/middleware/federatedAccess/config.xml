@@ -1,0 +1,12 @@
+<ExampleDiscoveryServiceConfiguration>
+        <IdentityProvider>
+                <Name>ProxyIdP</Name>
+                <EntityID>https://l4l-idp-01.kent.ac.uk</EntityID>
+                <MetadataLocation>metadata.xml</MetadataLocation>
+        </IdentityProvider>
+        <IdentityProvider>
+                <Name>Big Bank</Name>
+                <EntityID>https://bigbank.com</EntityID>
+                <MetadataLocation>metadata.xml</MetadataLocation>
+        </IdentityProvider>
+</ExampleDiscoveryServiceConfiguration>
