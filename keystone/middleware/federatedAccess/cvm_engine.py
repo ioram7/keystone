@@ -122,8 +122,6 @@ class CVM_Engine(object):
         '''
         self.conf = conf
         self.app = app
-        LOG.info("Current path: ")
-        LOG.info(os.getcwd())
         if 'attributeFile' in self.conf:
             self.confParser = AttributeConfigParser(self.conf['attributeFile'])
         else:
@@ -164,7 +162,6 @@ class CVM_Engine(object):
         LOG.debug(self.conf)
         body = req.body 
         data = simplejson.loads(body)
-        #LOG.debug(arr['auth']['passwordCredentials']['username'])
         attributesAssertion = {'permisRole': 'staff', 'uid' :'userUID1234', 'idp': 'kent.ac.uk', 'other': 'blablabla'}
         return self.engine(data,attributesAssertion)
         #return self.response_list_tenants('jonny')
@@ -182,8 +179,7 @@ class CVM_Engine(object):
                 tenant_id: optional parameter where the tenant_id is already known
                 
         '''
-	if userAttributes.has_key('idp'):
-		realm = userAttributes['idp'][0]
+	realm = data['realm']
         
         LOG.debug(' *** Engine On *** ')
         
@@ -193,8 +189,6 @@ class CVM_Engine(object):
             userAttributes = {'uid': 'userUID1234', 'permisRole': 'staff', 'eduPersonTargettedID' :'userUID1234', 'idp': 'kent.ac.uk', 'other': 'blablabla'}
        
         self.allAttributes = userAttributes
-        LOG.debug('User Att ')    
-        LOG.debug(userAttributes)    
         user_name = self.get_userName(userAttributes,realm)
         if user_name is None:
             return self.response_Error()
@@ -234,18 +228,13 @@ class CVM_Engine(object):
         return data_ref['id']
     
     def get_userName(self, userAttributes, realm):
+	if not type(realm) == str:
+            realm = realm['name']
         pid = self.confParser.getPID(realm)
 	if pid == None:
 	    pid = self.confParser.getPID("default")
         userAttributes = dict(userAttributes)
-	LOG.info(realm)
-        LOG.info('username:')
-        LOG.info(pid)
-        LOG.info(userAttributes)
         if userAttributes.has_key(pid):
-	    LOG.info("User has required pid for idp")
- 	    if(realm == 'google'):
-		return userAttributes[pid][0].replace("https://www.google.com/accounts/o8/id?id=","")+realm
             return userAttributes[pid][0]+realm
         else:
             return None
@@ -327,19 +316,12 @@ class CVM_Engine(object):
                 
         '''
         confAtt = self.confParser.getSetsAndAtts()
-        LOG.debug('confAtt')
-        LOG.debug(confAtt)
-        #a = {'a':'b'}
         valid = {}
         for set in confAtt:
             str = ''
             count = 0
-            #LOG.debug(confAtt[set])
             jok = confAtt[set]
             for att in jok:
-                #a.has_key(k)
-                #LOG.debug('key: '+att)
-                #LOG.debug('values '+confAtt[set][att])
                 values = confAtt[set][att]
                 if userAttributes.has_key(att):
                     if values[0] is None or values[0]==userAttributes[att][0]:
@@ -357,8 +339,6 @@ class CVM_Engine(object):
         LOG.info('tenant')
         LOG.info(ten)
         for attr,value in ca.iteritems():
-            LOG.info(attr)
-            LOG.info(value)
             if ten['tenant']['name']==value:
                 return True
         return False
@@ -370,8 +350,6 @@ class CVM_Engine(object):
         LOG.info(conf_attributes)
         ca = dict(conf_attributes)
         for attr,value in ca.iteritems():
-            LOG.info(attr)
-            LOG.info(value)
             ten = self.get_tenant_by_name(value)
             context = self.get_context()
             if ten is None:
@@ -386,39 +364,35 @@ class CVM_Engine(object):
                 
             self.check_roles(user_id, ten['id'],ten['friendlyName'],conf_attributes)
             
-            #ten['linked'] = True
             filt_tenants.append(ten)
         return filt_tenants
     
     def get_available_roles(self,fn,conf_attributes):
         conf_attributes = self.allAttributes
-        roles = self.confParser.getMappedAttributefForSet()[fn]
+	LOG.info("Finding roles for tenant: " + fn)
+        roles = self.confParser.getMappedAttributefForSet(fn)
         LOG.info('From COnf Roles')
         LOG.info(roles)
         res = []
         roles = dict(roles)
         conf_attributes = dict(conf_attributes)
         for role,attr in roles.iteritems():
-            LOG.info(role)
+            LOG.info("Role "+role)
             LOG.info(attr)
             count = 0
-            #attr = dict(attr)
-            for name,value in attr.iteritems():
-                #value = dict(value)
-                LOG.info(name)
-                LOG.info(value)
-                #name = value.keys()[0]
-                #value = value.items()[0][1]
-                LOG.info(name)
-                LOG.info(value)
+            for role,attrib in attr.iteritems():
+                LOG.info(role)
+                LOG.info(attrib)
+		attType = attrib.keys()[0]
+		value = attrib[attType]
                 LOG.info(conf_attributes.keys())
-                if name in conf_attributes.keys(): 
+                if attType in conf_attributes.keys(): 
                     if value is None:
                         count = count + 1
                     else:
                         if not value is None and conf_attributes[name]==value:
                             count = count + 1
-            if count == len(attr):
+	    if count == len(attr):
                 res.append(role)
         return res
     
@@ -426,9 +400,7 @@ class CVM_Engine(object):
         roles = self.get_available_roles(fn,conf_attributes);
         LOG.info('Aval Roles')
         LOG.info(roles)
-        #roles = ['admin']
         context = self.get_context()
-        #roles = dict(roles)
         for role in roles:
             if not self.check_user_roles(role, user_id, tenant_id):
                 newRole = self.get_role(role)
@@ -483,33 +455,34 @@ class AttributeConfigParser:
         def __init__(self, file):
                 self.tree = ET.parse(file)
             
-        def getMappedAttributefForSet(self): 
+        def getMappedAttributefForSet(self, setName): 
             element = None
             res = {}
             for set in self.getSets():
-                #if set.get("DisplayName") == setName:
-                element = set
+		
+                if set.get("DisplayName") == setName:
+                    element = set
                 attlist = {}
-                if element == None: return attlist
-                for att in element.iter():
-                    role = ''
-                    attribute = {}
-                    if att.tag == "MappedAttribute":
-                        for field in att.iter():
-                            if field.tag == "UserAttribute":
-                                if field.get("Value") is None:
-                                    attribute[field.get("Name")]=None
-                                else:
-                                    attribute[field.get("Name")]=field.get("Value")
-                            if field.tag == "RoleGranted":
-                                role = field.text
-                        attlist[role]=attribute
-                res[set.get("DisplayName")]=attlist
+            if element == None: return attlist
+            for att in element.iter():
+                role = ''
+                attribute = {}
+                if att.tag == "AttributeMapping":
+                    for field in att.iter():
+                        if field.tag == "Attribute":
+                            if field.get("Value") is None:
+                                attribute[field.get("Name")]=None
+                            else:
+                                attribute[field.get("Name")]=field.get("Value")
+                        if field.tag == "RoleGranted":
+                            role = field.text
+                    attlist[role]=attribute
+            res[set.get("DisplayName")]=attlist
                     
             return res
 
         def getSets(self):
-                return self.tree.getroot().find("SetOfAttributes").findall("Set")
+                return self.tree.getroot().find("SetOfTenants").findall("Tenant")
 
         def getAttributesForSet(self, setName): 
 		element = None
@@ -518,16 +491,15 @@ class AttributeConfigParser:
                     		element = set
             	attlist = {}
             	if element == None: return attlist
-            	for att in element.iter():
-                	if att.tag == "AttributeType":
+            	for att in element:
+                	if att.tag == "Attribute":
 		    		values = {}
-		    		val = att.get("Name").split("=")
-		    		if(len(val) > 1):
-					values =[val[1], att.get("FN")]
-		    		else:
-					values = [None,att.get("FN")]
-                    		attlist[val[0]] = values
-    
+				name = att.get("Name")
+				friendly = att.get("DisplayName")
+				if friendly == None: friendly = name
+		    		val = att.get("Value")		    		
+				values = [val,friendly]
+                    		attlist[name] = values
             	return attlist
     
         def getTenantSets(self):
@@ -535,8 +507,8 @@ class AttributeConfigParser:
             for set in self.getSets():
                 friendly = set.get("DisplayName")
                 name = ""
-                for att in set.iter():
-                                if att.tag == "AttributeType":
+                for att in set:
+                                if att.tag == "Attribute":
                                         name = name+att.get("Name")
                 tenantSets[friendly] = name
             return tenantSets
@@ -551,8 +523,8 @@ class AttributeConfigParser:
 		# Return atts
 		atts = []
 		for set in self.getSets():
-			for att in set.findall("AttributeType"):
-				name = att.get("Name").split("=")[0]
+			for att in set.findall("Attribute"):
+				name = att.get("Name")
 				if not name in atts:
 					atts.append(name)	
 		return atts
@@ -577,7 +549,9 @@ class Config:
 		self.attributes = self.parser.getAttributes()
 		self.setNames = self.parser.getTenantSets()
 		self.sets = self.parser.getSetsAndAtts()
-                self.mapAtt = self.parser.getMappedAttributefForSet()
+		self.mapAtt = {}
+		for key in self.sets.keys():
+			self.mapAtt[key] = self.parser.getMappedAttributeForSet(key)
         
 	def getMappedAttributes(self):
         	return self.mapAtt
