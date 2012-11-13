@@ -1,0 +1,29 @@
+<Config>
+    <CertificateFile>cvmiddleware.crt</CertificateFile>
+    <KeyFile>cvmmiddleware.key</KeyFile>
+    <IdPpidMapping Name="kent.ac.uk" PID="eduPersonTargetedID" />
+    <IdPpidMapping Name="default" PID="NameID" />
+
+    <SetOfTenants>
+        <Tenant DisplayName="Kent Personal Account">
+            <!-- Kent accounts -->
+            <Attribute Name="idp" Value="kent.ac.uk" DisplayName="Account" />
+            <Attribute Name="uid" DisplayName="ID" />
+            <Attribute Name="unikentaccountType" DisplayName="Role" />
+            <AttributeMapping>
+              <Attribute Name="unikentaccountType"/>
+              <RoleGranted>Admin</RoleGranted>
+           </AttributeMapping>
+        </Tenant>
+        <Tenant DisplayName="Kent Staff Account">
+            <!-- Kent Staff accounts -->
+            <Attribute Name="idp" Value="kent.ac.uk" DisplayName="Account" />
+            <Attribute Name="unikentaccountType" Value="staff" DisplayName="Role" />
+            <AttributeMapping>
+              <Attribute Name="unikentaccountType"/>
+              <RoleGranted>Admin</RoleGranted>
+           </AttributeMapping>
+        </Tenant>
+    </SetOfTenants>
+</Config>
+~          
