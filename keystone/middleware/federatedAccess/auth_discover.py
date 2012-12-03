@@ -111,7 +111,7 @@ class AuthDiscover():
         return self.valid_Response(response)
     
     def getRealmList(self):
-        response = self.discover.getRealmList(self.discover)
+        response = self.discover.getIdPList(self.discover)
         return self.valid_Response(response)
     
     

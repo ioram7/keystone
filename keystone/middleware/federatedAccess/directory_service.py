@@ -72,7 +72,7 @@ class ExampleDS(object):
 	endpoint+="?"
 	return endpoint   	
 
-    def getRealmList(self):
+    def getIdPList(self):
 	return self.confReader.getIdpList() 
     def __call__(self):
         return None
