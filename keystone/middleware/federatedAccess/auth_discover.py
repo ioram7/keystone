@@ -105,6 +105,7 @@ class AuthDiscover():
         return self.discover.discover(self.discover, realm) 
     
     def discovery(self,realm):
+	print realm
         request = self.create_IdpRequest(realm)
         endPoint = self.getEndpoint(realm)
         response = {'idpRequest':request,'idpEndpoint':endPoint}

@@ -229,13 +229,14 @@ class CVM_Engine(object):
     
     def get_userName(self, userAttributes, realm):
 	if not type(realm) == str:
-            realm = realm['name']
-        pid = self.confParser.getPID(realm)
+            idpname = realm['name']
+	    idp = realm["service_id"]
+        pid = self.confParser.getPID(idpname)
 	if pid == None:
 	    pid = self.confParser.getPID("default")
         userAttributes = dict(userAttributes)
         if userAttributes.has_key(pid):
-            return userAttributes[pid][0]+realm
+            return userAttributes[pid][0]+idp
         else:
             return None
     
@@ -250,6 +251,7 @@ class CVM_Engine(object):
             user['name']=ret['name']
             user['id']=ret['id']
         except UserNotFound:
+	    print "Attempting to create user with username: "+user_name
             ret = self.users.create_user(context,{'name':user_name})
             user['name'] = ret['user']['name']
             user['id'] = ret['user']['id']
@@ -404,6 +406,8 @@ class CVM_Engine(object):
         for role in roles:
             if not self.check_user_roles(role, user_id, tenant_id):
                 newRole = self.get_role(role)
+		print "This is the created ROLE"
+		print newRole
                 newRole = self.role.add_role_to_user(context, user_id, newRole['id'], tenant_id)
                 r = newRole['role']
                 LOG.info('New Role Linked')
@@ -427,7 +431,7 @@ class CVM_Engine(object):
                 retRole['name']=role['name']
                 retRole['id']=role['id']
                 return retRole
-        return self.role.create_role(context, {'name':name})
+        return self.role.create_role(context, {'name':name})['role']
         
             
                 

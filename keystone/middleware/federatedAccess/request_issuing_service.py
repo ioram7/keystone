@@ -57,7 +57,7 @@ sys.path.insert(0, '../')
 import dm.xmlsec.binding as xmlsec
 xmlsec.initialize()
 from os.path import dirname, basename
-from lxml.etree import parse,tostring
+from lxml.etree import parse,tostring,fromstring,ElementTree
 from time import localtime, strftime, gmtime
 import urllib
 import webbrowser
@@ -67,9 +67,37 @@ import base64
 LOG = logging.getLogger(__name__)
 
 class ExampleRIS(object):
-
     def __init__(self):
-        return None
+        self.tmpl_req = """<samlp:AuthnRequest
+        xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+        xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+        ID=""
+        Version="2.0"
+        IssueInstant=""
+        AssertionConsumerServiceIndex="0"
+        AttributeConsumingServiceIndex="0">
+        <saml:Issuer></saml:Issuer>
+        <samlp:NameIDPolicy
+        AllowCreate="true"
+        Format="urn:oasis:names:tc:SAML:2.0:nameid-format:transient"/>
+        <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+<SignedInfo>
+<CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+<SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+<Reference>
+<Transforms>
+<Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+</Transforms>
+<DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+<DigestValue/>
+</Reference>
+</SignedInfo>
+<SignatureValue/>
+<KeyInfo>
+<KeyName/>
+</KeyInfo>
+</Signature>
+        </samlp:AuthnRequest>"""
 
     def getIdPRequest(self,key, issuer):
         LOG.info('IssueRequest')
@@ -88,7 +116,7 @@ class ExampleRIS(object):
     def create_IdpRequest(self,key, issuer):
         time=strftime("%Y-%m-%dT%H:%M:%SZ", gmtime())
         id = uuid.uuid4()
-        doc = parse("tmpl_req.xml")
+        doc = ElementTree(fromstring(self.tmpl_req))
         doc.getroot().set("ID", id.urn)
         doc.getroot().set("IssueInstant", time)
         for node in doc.getroot().iter():
