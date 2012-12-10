@@ -53,7 +53,7 @@ Created on 10 Jul 2012
 import logging
 import uuid
 import os
-
+import hashlib
 import webob.dec
 import webob.exc
 import json as simplejson
@@ -236,7 +236,11 @@ class CVM_Engine(object):
 	    pid = self.confParser.getPID("default")
         userAttributes = dict(userAttributes)
         if userAttributes.has_key(pid):
-            return userAttributes[pid][0]+idp
+	    s = hashlib.sha1()
+	    s.update(userAttributes[pid][0]+idp)
+	    print "Digest Username...."
+	    print s.hexdigest()
+            return s.hexdigest()
         else:
             return None
     
@@ -392,7 +396,7 @@ class CVM_Engine(object):
                     if value is None:
                         count = count + 1
                     else:
-                        if not value is None and conf_attributes[name]==value:
+                        if not value is None and conf_attributes[attType]==value:
                             count = count + 1
 	    if count == len(attr):
                 res.append(role)
