@@ -238,8 +238,6 @@ class CVM_Engine(object):
         if userAttributes.has_key(pid):
 	    s = hashlib.sha1()
 	    s.update(userAttributes[pid][0]+idp)
-	    print "Digest Username...."
-	    print s.hexdigest()
             return s.hexdigest()
         else:
             return None
@@ -255,7 +253,6 @@ class CVM_Engine(object):
             user['name']=ret['name']
             user['id']=ret['id']
         except UserNotFound:
-	    print "Attempting to create user with username: "+user_name
             ret = self.users.create_user(context,{'name':user_name})
             user['name'] = ret['user']['name']
             user['id'] = ret['user']['id']
@@ -410,8 +407,6 @@ class CVM_Engine(object):
         for role in roles:
             if not self.check_user_roles(role, user_id, tenant_id):
                 newRole = self.get_role(role)
-		print "This is the created ROLE"
-		print newRole
                 newRole = self.role.add_role_to_user(context, user_id, newRole['id'], tenant_id)
                 r = newRole['role']
                 LOG.info('New Role Linked')
