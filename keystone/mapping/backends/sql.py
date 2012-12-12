@@ -61,7 +61,7 @@ class Mapping(sql.Base, Driver):
 	def delete_org_att(self, attribute_id):
 		session = self.get_session()
 		with session.begin():
-			ref = self._get_org_set(session, attribute_id)
+			ref = self._get_org_att(session, attribute_id)
 			session.delete(ref)
 			session.flush()
 

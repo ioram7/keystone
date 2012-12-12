@@ -46,7 +46,7 @@ class OrgMappingController(wsgi.Application):
 		LOG.debug("Deleting org attribute with ID: " + str(attribute_id))
 		self.mapping_api.delete_org_att(attribute_id)
 
-	def create_org_set(self, context, orgattribute):
+	def create_org_att(self, context, orgattribute):
 		LOG.debug("Creating attribute: " + str(orgattribute))
 		self.assert_admin(context)
 		attribute_id = uuid.uuid4().hex

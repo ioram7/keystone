@@ -39,14 +39,14 @@ def upgrade(migrate_engine):
                   Column('extra', sql.JsonBlob()))
 
     orgattributeset.create(migrate_engine, checkfirst=True)
-	
-	orgattribute = Table('orgattribute', meta,
+
+    orgattribute = Table('orgattribute', meta,
 				Column('id', sql.String(64), primary_key=True),
 				Column('type', sql.String(255)),
 				Column('value', sql.String(255)),
 				Column('extra', sql.JsonBlob()))
 
-    orgattributeset.create(migrate_engine, checkfirst=True)
+    orgattribute.create(migrate_engine, checkfirst=True)
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.

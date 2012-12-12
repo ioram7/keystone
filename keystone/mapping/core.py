@@ -48,11 +48,11 @@ class MappingExtension(wsgi.ExtensionRouter):
 			controller=org_mapping_controller,
 			action='get_org_atts',
 			conditions=dict(method=['GET']))
-		mapper.connect('/mappings/orgattributes/{att_id}',
+		mapper.connect('/mappings/orgattributes/{attribute_id}',
 			controller=org_mapping_controller,
 			action='get_org_atts',
 			conditions=dict(method=['GET']))
-		mapper.connect('/mappings/orgattributes/{att_id}',
+		mapper.connect('/mappings/orgattributes/{attribute_id}',
 			controller=org_mapping_controller,
 			action='delete_org_att',
 			conditions=dict(method=['DELETE']))
