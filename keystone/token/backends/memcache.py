@@ -53,7 +53,7 @@ class Token(token.Driver):
 
     def get_token(self, token_id):
         if token_id is None:
-            raise exception.TokenNotFound(token_id=token_id)
+            raise exception.TokenNotFound(token_id='')
         ptk = self._prefix_token_id(token_id)
         token = self.client.get(ptk)
         if token is None:
@@ -63,7 +63,7 @@ class Token(token.Driver):
 
     def create_token(self, token_id, data):
         data_copy = copy.deepcopy(data)
-        ptk = self._prefix_token_id(token_id)
+        ptk = self._prefix_token_id(self.token_to_key(token_id))
         if 'expires' not in data_copy:
             data_copy['expires'] = self._get_default_expire_time()
         kwargs = {}
@@ -93,8 +93,8 @@ class Token(token.Driver):
 
     def delete_token(self, token_id):
         # Test for existence
-        data = self.get_token(token_id)
-        ptk = self._prefix_token_id(token_id)
+        data = self.get_token(self.token_to_key(token_id))
+        ptk = self._prefix_token_id(self.token_to_key(token_id))
         result = self.client.delete(ptk)
         self._add_to_revocation_list(data)
         return result
@@ -109,9 +109,10 @@ class Token(token.Driver):
             token_ref = self.client.get(ptk)
             if token_ref:
                 if tenant_id is not None:
-                    if 'tenant' not in token_ref:
+                    tenant = token_ref.get('tenant')
+                    if not tenant:
                         continue
-                    if token_ref['tenant'].get('id') != tenant_id:
+                    if tenant.get('id') != tenant_id:
                         continue
                 tokens.append(token_id)
         return tokens

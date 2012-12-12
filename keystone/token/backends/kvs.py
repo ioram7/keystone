@@ -26,6 +26,7 @@ class Token(kvs.Base, token.Driver):
 
     # Public interface
     def get_token(self, token_id):
+        token_id = self.token_to_key(token_id)
         try:
             token = self.db.get('token-%s' % token_id)
         except exception.NotFound:
@@ -36,6 +37,7 @@ class Token(kvs.Base, token.Driver):
             raise exception.TokenNotFound(token_id=token_id)
 
     def create_token(self, token_id, data):
+        token_id = self.token_to_key(token_id)
         data_copy = copy.deepcopy(data)
         if 'expires' not in data:
             data_copy['expires'] = self._get_default_expire_time()
@@ -43,6 +45,7 @@ class Token(kvs.Base, token.Driver):
         return copy.deepcopy(data_copy)
 
     def delete_token(self, token_id):
+        token_id = self.token_to_key(token_id)
         try:
             token_ref = self.get_token(token_id)
             self.db.delete('token-%s' % token_id)
@@ -56,16 +59,18 @@ class Token(kvs.Base, token.Driver):
         for token, ref in self.db.items():
             if not token.startswith('token-'):
                 continue
-            if 'user' not in ref:
+            user = ref.get('user')
+            if not user:
                 continue
-            if ref['user'].get('id') != user_id:
+            if user.get('id') != user_id:
                 continue
             if ref.get('expires') and ref.get('expires') < now:
                 continue
             if tenant_id is not None:
-                if 'tenant' not in ref:
+                tenant = ref.get('tenant')
+                if not tenant:
                     continue
-                if ref['tenant'].get('id') != tenant_id:
+                if tenant.get('id') != tenant_id:
                     continue
             tokens.append(token.split('-', 1)[1])
         return tokens

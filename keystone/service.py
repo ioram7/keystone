@@ -33,6 +33,176 @@ from keystone import token
 LOG = logging.getLogger(__name__)
 
 
+class V3Router(wsgi.ComposingRouter):
+    def crud_routes(self, mapper, controller, collection_key, key):
+        collection_path = '/%(collection_key)s' % {
+            'collection_key': collection_key}
+        entity_path = '/%(collection_key)s/{%(key)s_id}' % {
+            'collection_key': collection_key,
+            'key': key}
+
+        mapper.connect(
+            collection_path,
+            controller=controller,
+            action='create_%s' % key,
+            conditions=dict(method=['POST']))
+        mapper.connect(
+            collection_path,
+            controller=controller,
+            action='list_%s' % collection_key,
+            conditions=dict(method=['GET']))
+        mapper.connect(
+            entity_path,
+            controller=controller,
+            action='get_%s' % key,
+            conditions=dict(method=['GET']))
+        mapper.connect(
+            entity_path,
+            controller=controller,
+            action='update_%s' % key,
+            conditions=dict(method=['PATCH']))
+        mapper.connect(
+            entity_path,
+            controller=controller,
+            action='delete_%s' % key,
+            conditions=dict(method=['DELETE']))
+
+    def __init__(self):
+        mapper = routes.Mapper()
+
+        apis = dict(
+            catalog_api=catalog.Manager(),
+            identity_api=identity.Manager(),
+            policy_api=policy.Manager(),
+            token_api=token.Manager())
+
+        # Catalog
+
+        self.crud_routes(
+            mapper,
+            catalog.controllers.ServiceV3(**apis),
+            'services',
+            'service')
+
+        self.crud_routes(
+            mapper,
+            catalog.controllers.EndpointV3(**apis),
+            'endpoints',
+            'endpoint')
+
+        # Identity
+
+        self.crud_routes(
+            mapper,
+            identity.controllers.DomainV3(**apis),
+            'domains',
+            'domain')
+
+        project_controller = identity.controllers.ProjectV3(**apis)
+        self.crud_routes(
+            mapper,
+            project_controller,
+            'projects',
+            'project')
+        mapper.connect(
+            '/users/{user_id}/projects',
+            controller=project_controller,
+            action='list_user_projects',
+            conditions=dict(method=['GET']))
+
+        self.crud_routes(
+            mapper,
+            identity.controllers.UserV3(**apis),
+            'users',
+            'user')
+
+        self.crud_routes(
+            mapper,
+            identity.controllers.CredentialV3(**apis),
+            'credentials',
+            'credential')
+
+        role_controller = identity.controllers.RoleV3(**apis)
+        self.crud_routes(
+            mapper,
+            role_controller,
+            'roles',
+            'role')
+        mapper.connect(
+            '/projects/{project_id}/users/{user_id}/roles/{role_id}',
+            controller=role_controller,
+            action='create_grant',
+            conditions=dict(method=['PUT']))
+        mapper.connect(
+            '/projects/{project_id}/users/{user_id}/roles/{role_id}',
+            controller=role_controller,
+            action='check_grant',
+            conditions=dict(method=['HEAD']))
+        mapper.connect(
+            '/projects/{project_id}/users/{user_id}/roles',
+            controller=role_controller,
+            action='list_grants',
+            conditions=dict(method=['GET']))
+        mapper.connect(
+            '/projects/{project_id}/users/{user_id}/roles/{role_id}',
+            controller=role_controller,
+            action='revoke_grant',
+            conditions=dict(method=['DELETE']))
+        mapper.connect(
+            '/domains/{domain_id}/users/{user_id}/roles/{role_id}',
+            controller=role_controller,
+            action='create_grant',
+            conditions=dict(method=['PUT']))
+        mapper.connect(
+            '/domains/{domain_id}/users/{user_id}/roles/{role_id}',
+            controller=role_controller,
+            action='check_grant',
+            conditions=dict(method=['HEAD']))
+        mapper.connect(
+            '/domains/{domain_id}/users/{user_id}/roles',
+            controller=role_controller,
+            action='list_grants',
+            conditions=dict(method=['GET']))
+        mapper.connect(
+            '/domains/{domain_id}/users/{user_id}/roles/{role_id}',
+            controller=role_controller,
+            action='revoke_grant',
+            conditions=dict(method=['DELETE']))
+
+        # Policy
+
+        policy_controller = policy.controllers.PolicyV3(**apis)
+        self.crud_routes(
+            mapper,
+            policy_controller,
+            'policies',
+            'policy')
+
+        # Token
+
+        """
+        # v2.0 LEGACY
+        mapper.connect('/tokens/{token_id}',
+                       controller=auth_controller,
+                       action='validate_token',
+                       conditions=dict(method=['GET']))
+        mapper.connect('/tokens/{token_id}',
+                       controller=auth_controller,
+                       action='validate_token_head',
+                       conditions=dict(method=['HEAD']))
+        mapper.connect('/tokens/{token_id}',
+                       controller=auth_controller,
+                       action='delete_token',
+                       conditions=dict(method=['DELETE']))
+        mapper.connect('/tokens/{token_id}/endpoints',
+                       controller=auth_controller,
+                       action='endpoints',
+                       conditions=dict(method=['GET']))
+        """
+
+        super(V3Router, self).__init__(mapper, [])
+
+
 class AdminRouter(wsgi.ComposingRouter):
     def __init__(self):
         mapper = routes.Mapper()
@@ -90,7 +260,7 @@ class AdminRouter(wsgi.ComposingRouter):
                        controller=extensions_controller,
                        action='get_extension_info',
                        conditions=dict(method=['GET']))
-        identity_router = identity.AdminRouter()
+        identity_router = identity.routers.Admin()
         routers = [identity_router]
 	
 
@@ -134,7 +304,7 @@ class PublicRouter(wsgi.ComposingRouter):
                        action='get_extension_info',
                        conditions=dict(method=['GET']))
 
-        identity_router = identity.PublicRouter()
+        identity_router = identity.routers.Public()
         routers = [identity_router]
 
         super(PublicRouter, self).__init__(mapper, routers)
@@ -246,6 +416,10 @@ class NoopController(wsgi.Application):
         return {}
 
 
+class ExternalAuthNotApplicable(Exception):
+    """External authentication is not applicable"""
+
+
 class TokenController(wsgi.Application):
     def __init__(self):
         self.catalog_api = catalog.Manager()
@@ -288,143 +462,49 @@ class TokenController(wsgi.Application):
         that will return a token that is scoped to that tenant.
         """
 
-        if 'passwordCredentials' in auth:
-            user_id = auth['passwordCredentials'].get('userId', None)
-            username = auth['passwordCredentials'].get('username', '')
-            password = auth['passwordCredentials'].get('password', '')
-            tenant_name = auth.get('tenantName', None)
+        if auth is None:
+            raise exception.ValidationError(attribute='auth',
+                                            target='request body')
 
-            if not user_id and not username:
-                raise exception.ValidationError(
-                    attribute='username or userId',
-                    target='passwordCredentials')
+        auth_token_data = None
 
-            if username:
-                try:
-                    user_ref = self.identity_api.get_user_by_name(
-                        context=context, user_name=username)
-                    user_id = user_ref['id']
-                except exception.UserNotFound:
-                    raise exception.Unauthorized()
-
-            if not password:
-                raise exception.ValidationError(
-                    attribute='password',
-                    target='passwordCredentials')
-
-            # more compat
-            tenant_id = auth.get('tenantId', None)
-            if tenant_name:
-                try:
-                    tenant_ref = self.identity_api.get_tenant_by_name(
-                        context=context, tenant_name=tenant_name)
-                    tenant_id = tenant_ref['id']
-                except exception.TenantNotFound:
-                    raise exception.Unauthorized()
-
-            try:
-                auth_info = self.identity_api.authenticate(context=context,
-                                                           user_id=user_id,
-                                                           password=password,
-                                                           tenant_id=tenant_id)
-                (user_ref, tenant_ref, metadata_ref) = auth_info
-
-                # If the user is disabled don't allow them to authenticate
-                if not user_ref.get('enabled', True):
-                    LOG.warning('User %s is disabled' % user_id)
-                    raise exception.Unauthorized()
-
-                # If the tenant is disabled don't allow them to authenticate
-                if tenant_ref and not tenant_ref.get('enabled', True):
-                    LOG.warning('Tenant %s is disabled' % tenant_id)
-                    raise exception.Unauthorized()
-            except AssertionError as e:
-                raise exception.Unauthorized(e.message)
-            auth_token_data = dict(zip(['user', 'tenant', 'metadata'],
-                                       auth_info))
-            expiry = self.token_api._get_default_expire_time(context=context)
-
-            if tenant_ref:
-                catalog_ref = self.catalog_api.get_catalog(
-                    context=context,
-                    user_id=user_ref['id'],
-                    tenant_id=tenant_ref['id'],
-                    metadata=metadata_ref)
-            else:
-                catalog_ref = {}
-        elif 'token' in auth:
-            old_token = auth['token'].get('id', None)
-            tenant_name = auth.get('tenantName')
-
-            try:
-                old_token_ref = self.token_api.get_token(context=context,
-                                                         token_id=old_token)
-            except exception.NotFound:
-                LOG.warning("Token not found: " + str(old_token))
-                raise exception.Unauthorized()
-
-            user_ref = old_token_ref['user']
-            user_id = user_ref['id']
-
-            current_user_ref = self.identity_api.get_user(context=context,
-                                                          user_id=user_id)
-
-            # If the user is disabled don't allow them to authenticate
-            if not current_user_ref.get('enabled', True):
-                LOG.warning('User %s is disabled' % user_id)
-                raise exception.Unauthorized()
-
-            if tenant_name:
-                tenant_ref = self.identity_api.get_tenant_by_name(
-                    context=context,
-                    tenant_name=tenant_name)
-                tenant_id = tenant_ref['id']
-            else:
-                tenant_id = auth.get('tenantId', None)
-            tenants = self.identity_api.get_tenants_for_user(context, user_id)
-
-            if tenant_id:
-                if not tenant_id in tenants:
-                    LOG.warning('User %s is authorized for tenant %s'
-                                % (user_id, tenant_id))
-                    raise exception.Unauthorized()
-
-            expiry = old_token_ref['expires']
-            try:
-                tenant_ref = self.identity_api.get_tenant(context=context,
-                                                          tenant_id=tenant_id)
-            except exception.TenantNotFound:
-                tenant_ref = None
-                metadata_ref = {}
-                catalog_ref = {}
-            except exception.MetadataNotFound:
-                metadata_ref = {}
-                catalog_ref = {}
-
-            # If the tenant is disabled don't allow them to authenticate
-            if tenant_ref and not tenant_ref.get('enabled', True):
-                LOG.warning('Tenant %s is disabled' % tenant_id)
-                raise exception.Unauthorized()
-
-            if tenant_ref:
-                metadata_ref = self.identity_api.get_metadata(
-                    context=context,
-                    user_id=user_ref['id'],
-                    tenant_id=tenant_ref['id'])
-                catalog_ref = self.catalog_api.get_catalog(
-                    context=context,
-                    user_id=user_ref['id'],
-                    tenant_id=tenant_ref['id'],
-                    metadata=metadata_ref)
-
-            auth_token_data = dict(dict(user=current_user_ref,
-                                        tenant=tenant_ref,
-                                        metadata=metadata_ref))
+        if "token" in auth:
+            # Try to authenticate using a token
+            auth_token_data, auth_info = self._authenticate_token(
+                context, auth)
         else:
-            raise exception.ValidationError(
-                attribute='passwordCredentials or token', target='auth')
+            # Try external authentication
+            try:
+                auth_token_data, auth_info = self._authenticate_external(
+                    context, auth)
+            except ExternalAuthNotApplicable:
+                # Try local authentication
+                auth_token_data, auth_info = self._authenticate_local(
+                    context, auth)
 
-        auth_token_data['expires'] = expiry
+        user_ref, tenant_ref, metadata_ref = auth_info
+
+        # If the user is disabled don't allow them to authenticate
+        if not user_ref.get('enabled', True):
+            msg = 'User is disabled: %s' % user_ref['id']
+            LOG.warning(msg)
+            raise exception.Unauthorized(msg)
+
+        # If the tenant is disabled don't allow them to authenticate
+        if tenant_ref and not tenant_ref.get('enabled', True):
+            msg = 'Tenant is disabled: %s' % tenant_ref['id']
+            LOG.warning(msg)
+            raise exception.Unauthorized(msg)
+
+        if tenant_ref:
+            catalog_ref = self.catalog_api.get_catalog(
+                context=context,
+                user_id=user_ref['id'],
+                tenant_id=tenant_ref['id'],
+                metadata=metadata_ref)
+        else:
+            catalog_ref = {}
+
         auth_token_data['id'] = 'placeholder'
 
         roles_ref = []
@@ -440,7 +520,6 @@ class TokenController(wsgi.Application):
         if config.CONF.signing.token_format == 'UUID':
             token_id = uuid.uuid4().hex
         elif config.CONF.signing.token_format == 'PKI':
-
             token_id = cms.cms_sign_token(json.dumps(token_data),
                                           config.CONF.signing.certfile,
                                           config.CONF.signing.keyfile)
@@ -453,6 +532,7 @@ class TokenController(wsgi.Application):
             self.token_api.create_token(
                 context, token_id, dict(key=token_id,
                                         id=token_id,
+                                        expires=auth_token_data['expires'],
                                         user=user_ref,
                                         tenant=tenant_ref,
                                         metadata=metadata_ref))
@@ -468,6 +548,181 @@ class TokenController(wsgi.Application):
         token_data['access']['token']['id'] = token_id
 
         return token_data
+
+    def _authenticate_token(self, context, auth):
+        """Try to authenticate using an already existing token.
+
+        Returns auth_token_data, (user_ref, tenant_ref, metadata_ref)
+        """
+        if 'token' not in auth:
+            raise exception.ValidationError(
+                attribute='token', target='auth')
+
+        if "id" not in auth['token']:
+            raise exception.ValidationError(
+                attribute="id", target="token")
+
+        old_token = auth['token']['id']
+
+        try:
+            old_token_ref = self.token_api.get_token(context=context,
+                                                     token_id=old_token)
+        except exception.NotFound as e:
+            raise exception.Unauthorized(e)
+
+        user_ref = old_token_ref['user']
+        user_id = user_ref['id']
+
+        current_user_ref = self.identity_api.get_user(context=context,
+                                                      user_id=user_id)
+
+        tenant_id = self._get_tenant_id_from_auth(context, auth)
+
+        tenant_ref = self._get_tenant_ref(context, user_id, tenant_id)
+        metadata_ref = self._get_metadata_ref(context, user_id, tenant_id)
+
+        expiry = old_token_ref['expires']
+        auth_token_data = self._get_auth_token_data(current_user_ref,
+                                                    tenant_ref,
+                                                    metadata_ref,
+                                                    expiry)
+
+        return auth_token_data, (current_user_ref, tenant_ref, metadata_ref)
+
+    def _authenticate_local(self, context, auth):
+        """Try to authenticate against the identity backend.
+
+        Returns auth_token_data, (user_ref, tenant_ref, metadata_ref)
+        """
+        if 'passwordCredentials' not in auth:
+            raise exception.ValidationError(
+                attribute='passwordCredentials', target='auth')
+
+        if "password" not in auth['passwordCredentials']:
+            raise exception.ValidationError(
+                attribute='password', target='passwordCredentials')
+
+        password = auth['passwordCredentials']['password']
+
+        if ("userId" not in auth['passwordCredentials'] and
+                "username" not in auth['passwordCredentials']):
+            raise exception.ValidationError(
+                attribute='username or userId',
+                target='passwordCredentials')
+
+        user_id = auth['passwordCredentials'].get('userId', None)
+        username = auth['passwordCredentials'].get('username', '')
+
+        if username:
+            try:
+                user_ref = self.identity_api.get_user_by_name(
+                    context=context, user_name=username)
+                user_id = user_ref['id']
+            except exception.UserNotFound as e:
+                raise exception.Unauthorized(e)
+
+        tenant_id = self._get_tenant_id_from_auth(context, auth)
+
+        try:
+            auth_info = self.identity_api.authenticate(
+                context=context,
+                user_id=user_id,
+                password=password,
+                tenant_id=tenant_id)
+        except AssertionError as e:
+            raise exception.Unauthorized(e)
+        (user_ref, tenant_ref, metadata_ref) = auth_info
+
+        expiry = self.token_api._get_default_expire_time(context=context)
+        auth_token_data = self._get_auth_token_data(user_ref,
+                                                    tenant_ref,
+                                                    metadata_ref,
+                                                    expiry)
+
+        return auth_token_data, (user_ref, tenant_ref, metadata_ref)
+
+    def _authenticate_external(self, context, auth):
+        """Try to authenticate an external user via REMOTE_USER variable.
+
+        Returns auth_token_data, (user_ref, tenant_ref, metadata_ref)
+        """
+        if 'REMOTE_USER' not in context:
+            raise ExternalAuthNotApplicable()
+
+        username = context['REMOTE_USER']
+        try:
+            user_ref = self.identity_api.get_user_by_name(
+                context=context, user_name=username)
+            user_id = user_ref['id']
+        except exception.UserNotFound as e:
+            raise exception.Unauthorized(e)
+
+        tenant_id = self._get_tenant_id_from_auth(context, auth)
+
+        tenant_ref = self._get_tenant_ref(context, user_id, tenant_id)
+        metadata_ref = self._get_metadata_ref(context, user_id, tenant_id)
+
+        expiry = self.token_api._get_default_expire_time(context=context)
+        auth_token_data = self._get_auth_token_data(user_ref,
+                                                    tenant_ref,
+                                                    metadata_ref,
+                                                    expiry)
+
+        return auth_token_data, (user_ref, tenant_ref, metadata_ref)
+
+    def _get_auth_token_data(self, user, tenant, metadata, expiry):
+        return dict(dict(user=user,
+                         tenant=tenant,
+                         metadata=metadata,
+                         expires=expiry))
+
+    def _get_tenant_id_from_auth(self, context, auth):
+        """Extract tenant information from auth dict.
+
+        Returns a valid tenant_id if it exists, or None if not specified.
+        """
+        tenant_id = auth.get('tenantId', None)
+        tenant_name = auth.get('tenantName', None)
+        if tenant_name:
+            try:
+                tenant_ref = self.identity_api.get_tenant_by_name(
+                    context=context, tenant_name=tenant_name)
+                tenant_id = tenant_ref['id']
+            except exception.TenantNotFound as e:
+                raise exception.Unauthorized(e)
+        return tenant_id
+
+    def _get_tenant_ref(self, context, user_id, tenant_id):
+        """Returns the tenant_ref for the user's tenant"""
+        tenant_ref = None
+        if tenant_id:
+            tenants = self.identity_api.get_tenants_for_user(context, user_id)
+            if tenant_id not in tenants:
+                msg = 'User %s is unauthorized for tenant %s' % (
+                    user_id, tenant_id)
+                LOG.warning(msg)
+                raise exception.Unauthorized(msg)
+
+            try:
+                tenant_ref = self.identity_api.get_tenant(context=context,
+                                                          tenant_id=tenant_id)
+            except exception.TenantNotFound as e:
+                exception.Unauthorized(e)
+        return tenant_ref
+
+    def _get_metadata_ref(self, context, user_id, tenant_id):
+        """Returns the metadata_ref for a user in a tenant"""
+        metadata_ref = {}
+        if tenant_id:
+            try:
+                metadata_ref = self.identity_api.get_metadata(
+                    context=context,
+                    user_id=user_id,
+                    tenant_id=tenant_id)
+            except exception.MetadataNotFound:
+                metadata_ref = {}
+
+        return metadata_ref
 
     def _get_token_ref(self, context, token_id, belongs_to=None):
         """Returns a token if a valid one exists.
@@ -582,13 +837,12 @@ class TokenController(wsgi.Application):
         user_ref = token_ref['user']
         metadata_ref = token_ref['metadata']
         expires = token_ref['expires']
-        issue_time = timeutils.utcnow().time().isoformat()
         if expires is not None:
             if not isinstance(expires, unicode):
                 expires = timeutils.isotime(expires)
         o = {'access': {'token': {'id': token_ref['id'],
                                   'expires': expires,
-                                  'issued_at': issue_time
+                                  'issued_at': timeutils.strtime()
                                   },
                         'user': {'id': user_ref['id'],
                                  'name': user_ref['name'],
@@ -640,7 +894,7 @@ class TokenController(wsgi.Application):
 
         """
         if not catalog_ref:
-            return {}
+            return []
 
         services = {}
         for region, region_ref in catalog_ref.iteritems():
@@ -778,3 +1032,10 @@ def admin_version_app_factory(global_conf, **local_conf):
     conf = global_conf.copy()
     conf.update(local_conf)
     return AdminVersionRouter()
+
+
+@logging.fail_gracefully
+def v3_app_factory(global_conf, **local_conf):
+    conf = global_conf.copy()
+    conf.update(local_conf)
+    return V3Router()

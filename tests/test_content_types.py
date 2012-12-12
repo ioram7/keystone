@@ -258,10 +258,6 @@ class RestfulTestCase(test.TestCase):
 class CoreApiTests(object):
     def assertValidError(self, error):
         """Applicable to XML and JSON."""
-        try:
-            print error.attrib
-        except:
-            pass
         self.assertIsNotNone(error.get('code'))
         self.assertIsNotNone(error.get('title'))
         self.assertIsNotNone(error.get('message'))
@@ -361,6 +357,22 @@ class CoreApiTests(object):
                         'password': self.user_foo['password'],
                     },
                     'tenantId': self.tenant_bar['id'],
+                },
+            },
+            # TODO(dolph): creating a token should result in a 201 Created
+            expected_status=200)
+        self.assertValidAuthenticationResponse(r)
+
+    def test_authenticate_unscoped(self):
+        r = self.public_request(
+            method='POST',
+            path='/v2.0/tokens',
+            body={
+                'auth': {
+                    'passwordCredentials': {
+                        'username': self.user_foo['name'],
+                        'password': self.user_foo['password'],
+                    },
                 },
             },
             # TODO(dolph): creating a token should result in a 201 Created
@@ -538,7 +550,7 @@ class JsonTestCase(RestfulTestCase, CoreApiTests):
         if require_service_catalog:
             self.assertIsNotNone(serviceCatalog)
         if serviceCatalog is not None:
-            self.assertTrue(len(r.body['access']['serviceCatalog']))
+            self.assertTrue(isinstance(serviceCatalog, list))
             for service in r.body['access']['serviceCatalog']:
                 # validate service
                 self.assertIsNotNone(service.get('name'))
@@ -801,7 +813,6 @@ class XmlTestCase(RestfulTestCase, CoreApiTests):
         if require_service_catalog:
             self.assertIsNotNone(serviceCatalog)
         if serviceCatalog is not None:
-            self.assertTrue(len(serviceCatalog.findall(self._tag('service'))))
             for service in serviceCatalog.findall(self._tag('service')):
                 # validate service
                 self.assertIsNotNone(service.get('name'))

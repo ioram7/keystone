@@ -41,8 +41,8 @@ def setup_logging(conf):
             logging.config.fileConfig(conf.log_config)
             return
         else:
-            raise RuntimeError('Unable to locate specified logging '
-                               'config file: %s' % conf.log_config)
+            raise RuntimeError(_('Unable to locate specified logging '
+                               'config file: %s') % conf.log_config)
 
     root_logger = logging.root
     if conf.debug:
@@ -122,6 +122,9 @@ def register_cli_int(*args, **kw):
     group = kw.pop('group', None)
     return conf.register_cli_opt(cfg.IntOpt(*args, **kw), group=group)
 
+
+register_cli_bool('standard-threads', default=False)
+
 register_str('admin_token', default='ADMIN')
 register_str('bind_host', default='0.0.0.0')
 register_str('compute_port', default=8774)
@@ -129,7 +132,8 @@ register_str('admin_port', default=35357)
 register_str('public_port', default=5000)
 register_str('onready')
 register_str('auth_admin_prefix', default='')
-register_bool('standard-threads', default=False)
+register_str('policy_file', default='policy.json')
+register_str('policy_default_rule', default=None)
 
 #ssl options
 register_bool('enable', group='ssl', default=False)
@@ -161,7 +165,7 @@ register_str('driver', group='catalog',
 register_str('driver', group='identity',
              default='keystone.identity.backends.sql.Identity')
 register_str('driver', group='policy',
-             default='keystone.policy.backends.rules.Policy')
+             default='keystone.policy.backends.sql.Policy')
 register_str('driver', group='token',
              default='keystone.token.backends.kvs.Token')
 register_str('driver', group='ec2',
@@ -186,8 +190,11 @@ register_str('user_id_attribute', group='ldap', default='cn')
 register_str('user_name_attribute', group='ldap', default='sn')
 register_str('user_mail_attribute', group='ldap', default='email')
 register_str('user_pass_attribute', group='ldap', default='userPassword')
+register_str('user_enabled_attribute', group='ldap', default='enabled')
+register_int('user_enabled_mask', group='ldap', default=0)
+register_str('user_enabled_default', group='ldap', default='True')
 register_list('user_attribute_ignore', group='ldap',
-              default='tenant_id,enable,tenants')
+              default='tenant_id,tenants')
 register_bool('user_allow_create', group='ldap', default=True)
 register_bool('user_allow_update', group='ldap', default=True)
 register_bool('user_allow_delete', group='ldap', default=True)
@@ -199,7 +206,8 @@ register_str('tenant_id_attribute', group='ldap', default='cn')
 register_str('tenant_member_attribute', group='ldap', default='member')
 register_str('tenant_name_attribute', group='ldap', default='ou')
 register_str('tenant_desc_attribute', group='ldap', default='desc')
-register_list('tenant_attribute_ignore', group='ldap', default='enabled')
+register_str('tenant_enabled_attribute', group='ldap', default='enabled')
+register_list('tenant_attribute_ignore', group='ldap', default='')
 register_bool('tenant_allow_create', group='ldap', default=True)
 register_bool('tenant_allow_update', group='ldap', default=True)
 register_bool('tenant_allow_delete', group='ldap', default=True)
