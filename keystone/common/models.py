@@ -137,3 +137,4 @@ class OrgAttributeSet(Model):
 	
 	"""
 	required_keys = ('id', 'name')	
+	optional_keys = ('description')
