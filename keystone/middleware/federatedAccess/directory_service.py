@@ -49,8 +49,8 @@ Created on 10 Dec 2012
 
 @author: Kristy Siu 
 '''
-from keystone.catalog.core import ServiceController as SC
-from keystone.catalog.core import EndpointController as EC
+from keystone.catalog.controllers import Service as SC
+from keystone.catalog.controllers import Endpoint as EC
 import logging
 LOG = logging.getLogger(__name__)
 

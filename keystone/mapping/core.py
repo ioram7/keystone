@@ -24,21 +24,46 @@ class MappingExtension(wsgi.ExtensionRouter):
 
 	"""
 	def add_routes(self, mapper):
-		mapping_controller = org.OrgMappingController()
+		org_mapping_controller = org.OrgMappingController()
 		# Role mapping operations
+		# Org Sets
 		mapper.connect('/mappings/orgattributeset',
-			controller=mapping_controller,
+			controller=org_mapping_controller,
 			action='get_org_sets',
 			conditions=dict(method=['GET']))
 		mapper.connect('/mappings/orgattributeset/{set_id}',
-			controller=mapping_controller,
+			controller=org_mapping_controller,
 			action='get_org_sets',
 			conditions=dict(method=['GET']))
 		mapper.connect('/mappings/orgattributeset/{set_id}',
-			controller=mapping_controller,
+			controller=org_mapping_controller,
 			action='delete_org_set',
 			conditions=dict(method=['DELETE']))
 		mapper.connect('/mappings/orgattributeset',
-			controller=mapping_controller,
+			controller=org_mapping_controller,
 			action='create_org_set',
 			conditions=dict(method=['POST']))
+		# Org Attributes
+		mapper.connect('/mappings/orgattributes',
+			controller=org_mapping_controller,
+			action='get_org_atts',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/orgattributes/{att_id}',
+			controller=org_mapping_controller,
+			action='get_org_atts',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/orgattributes/{att_id}',
+			controller=org_mapping_controller,
+			action='delete_org_att',
+			conditions=dict(method=['DELETE']))
+		mapper.connect('/mappings/orgattributes',
+			controller=org_mapping_controller,
+			action='create_org_att',
+			conditions=dict(method=['POST']))
+
+class Driver(object):
+	
+	def list_org_sets(self):
+
+		raise exception.NotImplemented()
+	

@@ -59,9 +59,7 @@ import webob.exc
 import json as simplejson
 import json
 
-from keystone.identity.core import TenantController
-from keystone.identity.core import UserController
-from keystone.identity.core import RoleController
+from keystone import identity
 from keystone.exception import UserNotFound
 from keystone.exception import TenantNotFound
 from keystone.token.core import Manager
@@ -126,9 +124,9 @@ class CVM_Engine(object):
             self.confParser = AttributeConfigParser(self.conf['attributeFile'])
         else:
             self.confParser = AttributeConfigParser(ATT_CONFIG_FILE)
-        self.identity = TenantController()
-        self.users = UserController()
-        self.role = RoleController()
+        self.identity = identity.controllers.Tenant()
+        self.users = identity.controllers.User()
+        self.role = identity.controllers.Role()
         self.token = Manager()
       
         LOG.info('Starting keystone CVM_Engine middleware')
