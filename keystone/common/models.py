@@ -127,3 +127,13 @@ class Role(Model):
 
     required_keys = ('id', 'name')
     optional_keys = tuple()
+
+class OrgAttributeSet(Model):
+	"""Organisational Attribute Set object
+
+	Required keys:
+		id
+		name
+	
+	"""
+	required_keys = ('id', 'name')	

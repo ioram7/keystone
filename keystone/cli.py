@@ -50,7 +50,7 @@ class DbSync(BaseApp):
         super(DbSync, self).__init__(*args, **kw)
 
     def main(self):
-        for k in ['identity', 'catalog', 'policy', 'token']:
+        for k in ['identity', 'catalog', 'policy', 'token', 'mapping']:
             driver = importutils.import_object(getattr(CONF, k).driver)
             if hasattr(driver, 'db_sync'):
                 driver.db_sync()

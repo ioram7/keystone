@@ -45,9 +45,9 @@
 
 
 '''
-Created on 16 Jul 2012
+Created on 10 Dec 2012
 
-@author: Matteo Casenove
+@author: Kristy Siu 
 '''
 from keystone.catalog.core import ServiceController as SC
 from keystone.catalog.core import EndpointController as EC

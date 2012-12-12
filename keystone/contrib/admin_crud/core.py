@@ -32,7 +32,6 @@ class CrudExtension(wsgi.ExtensionRouter):
         role_controller = identity.RoleController()
         service_controller = catalog.ServiceController()
         endpoint_controller = catalog.EndpointController()
-
         # Tenant Operations
         mapper.connect(
             '/tenants',
@@ -215,3 +214,4 @@ class CrudExtension(wsgi.ExtensionRouter):
             controller=role_controller,
             action='delete_role',
             conditions=dict(method=['DELETE']))
+		
