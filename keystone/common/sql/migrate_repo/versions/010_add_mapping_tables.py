@@ -34,19 +34,30 @@ def upgrade(migrate_engine):
 
     sql.ModelBase.metadata.create_all(migrate_engine)
 
-    orgattributeset = Table('orgattributeset', meta,
+    org_attribute_set = Table('org_attribute_set', meta,
                   Column('id', sql.String(64), primary_key=True),
                   Column('extra', sql.JsonBlob()))
 
-    orgattributeset.create(migrate_engine, checkfirst=True)
+    org_attribute_set.create(migrate_engine, checkfirst=True)
 
-    orgattribute = Table('orgattribute', meta,
+    org_attribute = Table('org_attribute', meta,
 				Column('id', sql.String(64), primary_key=True),
 				Column('type', sql.String(255)),
 				Column('value', sql.String(255)),
 				Column('extra', sql.JsonBlob()))
 
-    orgattribute.create(migrate_engine, checkfirst=True)
+    org_attribute.create(migrate_engine, checkfirst=True)
+	
+	org_attribute_association = Table('org_attribute_association', meta,
+				Column('id', sql.String(64), primary_key=True),
+				Column('org_attribute_id', sql.String(64),
+						sql.ForeignKey('org_attribute.id'),
+						nullable=False),
+				Column('org_attribute_set_id', sql.String(64),
+						sql.ForeignKey('org_attribute_set.id'),
+						nullable=False))
+
+	org_attribute_association.create(migrate_engine, checkfirst=True)
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.

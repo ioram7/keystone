@@ -109,3 +109,26 @@ class OrgAttribute(sql.ModelBase, sql.DictBase):
 		extra_copy['type'] = self.type
 		extra_copy['value'] = self.value
 		return extra_copy
+
+class OrgAttributeAssociation(sql.ModelBase, sql.DictBase):
+	__tablename__ = 'org_attribute_association'
+	id = sql.Column(sql.String(64), primary_key=True)
+	org_attribute_id = sql.Column(sql.String(64), sql.ForeignKey('org_attribute.id'))
+	org_attribute_set_id = sql.Column(sql.String(64),  sql.ForeignKey('org_attribute_set.id'))
+
+	@classmethod
+	def from_dict(cls, service_dict):
+		extra = {}
+		for k, v in service_dict.copy().iteritems():
+			if k not in ['id', 'org_attribute_set_id', 'org_attribute_id', 'extra']:
+				extra[k] = service_dict.pop(k)
+
+		service_dict['extra'] = extra
+		return cls(**service_dict)
+
+	def to_dict(self):
+		extra_copy = self.extra.copy()
+		extra_copy['id'] = self.id
+		extra_copy['org_attribute_id'] = self.org_attribute_id
+		extra_copy['org_attribute_set_id'] = self.org_attribute_set_id
+		return extra_copy
