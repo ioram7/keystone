@@ -15,7 +15,7 @@
 # under the License.
 
 from keystone.common import wsgi
-from keystone.mapping import org
+from keystone.mapping import org, os
 
 class MappingExtension(wsgi.ExtensionRouter):
 	"""
@@ -25,6 +25,7 @@ class MappingExtension(wsgi.ExtensionRouter):
 	"""
 	def add_routes(self, mapper):
 		org_mapping_controller = org.OrgMappingController()
+		os_mapping_controller = os.OsMappingController()
 		# Role mapping operations
 		# Org Sets
 		mapper.connect('/mappings/orgattributeset',
@@ -77,6 +78,41 @@ class MappingExtension(wsgi.ExtensionRouter):
 		mapper.connect('/mappings/orgattributeassociation',
 			controller=org_mapping_controller,
 			action='create_org_assoc',
+			conditions=dict(method=['POST']))
+		# os Sets
+		mapper.connect('/mappings/osattributeset',
+			controller=os_mapping_controller,
+			action='get_os_sets',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/osattributeset/{set_id}',
+			controller=os_mapping_controller,
+			action='get_os_sets',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/osattributeset/{set_id}',
+			controller=os_mapping_controller,
+			action='delete_os_set',
+			conditions=dict(method=['DELETE']))
+		mapper.connect('/mappings/osattributeset',
+			controller=os_mapping_controller,
+			action='create_os_set',
+			conditions=dict(method=['POST']))
+	
+		# os Associations
+		mapper.connect('/mappings/osattributeassociation',
+			controller=os_mapping_controller,
+			action='get_os_assocs',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/osattributeassociation/{assoc_id}',
+			controller=os_mapping_controller,
+			action='get_os_assocs',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/osattributeassociation/{assoc_id}',
+			controller=os_mapping_controller,
+			action='delete_os_assoc',
+			conditions=dict(method=['DELETE']))
+		mapper.connect('/mappings/osattributeassociation',
+			controller=os_mapping_controller,
+			action='create_os_assoc',
 			conditions=dict(method=['POST']))
 
 class Driver(object):

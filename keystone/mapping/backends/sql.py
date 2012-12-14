@@ -1,5 +1,6 @@
 from keystone.mapping import Driver
 from keystone.common import sql
+from keystone.identity.backends import sql as identity
 from keystone import exception
 
 
@@ -16,6 +17,7 @@ class Mapping(sql.Base, Driver):
 			session.add(orgset)
 			session.flush()
 		return orgset.to_dict()
+
 	def get_org_set(self, set_id):
 		session = self.get_session()
 		ref = self._get_org_set(session, set_id).to_dict()
@@ -23,21 +25,25 @@ class Mapping(sql.Base, Driver):
 		print links
 		ref['attributes'] = [(self.get_org_att(s.org_attribute_id)) for s in list(links)]
 		return ref
+
 	def _get_org_set(self, session, set_id):
 		try:
 			return session.query(OrgAttributeSet).filter_by(id=set_id).one()
 		except sql.NotFound:
 			raise exception.ServiceNotFound(set_id=set_id)
+
 	def list_org_sets(self):
 		session = self.get_session()
 		sets = session.query(OrgAttributeSet).all()
 		return [s.to_dict() for s in list(sets)]
+
 	def delete_org_set(self, set_id):
 		session = self.get_session()
 		with session.begin():
 			ref = self._get_org_set(session, set_id)
 			session.delete(ref)
 			session.flush()
+
 	# Attributes
 	def create_org_attribute(self, context, org_att_id, org_att_ref):
 		session = self.get_session()
@@ -99,6 +105,93 @@ class Mapping(sql.Base, Driver):
 			ref = self._get_org_assoc(session, assoc_id)
 			session.delete(ref)
 			session.flush()
+
+	# Openstack
+	#Sets
+	def create_os_attribute_set(self, context, os_set_id, os_set_ref):
+		session = self.get_session()
+		with session.begin():
+			osset = OsAttributeSet.from_dict(os_set_ref)
+			session.add(osset)
+			session.flush()
+		return osset.to_dict()
+
+	def get_os_set(self, set_id):
+		session = self.get_session()
+		ref = self._get_os_set(session, set_id).to_dict()
+		links = session.query(OsAttributeAssociation).filter_by(os_attribute_set_id=set_id).all()
+		ref['attributes'] = [(self._get_os_att(session, s.attribute_id, s.type)) for s in list(links)]
+		return ref
+
+	def _get_os_set(self, session, set_id):
+		try:
+			return session.query(OsAttributeSet).filter_by(id=set_id).one()
+		except sql.NotFound:
+			raise exception.ServiceNotFound(set_id=set_id)
+
+	def list_os_sets(self):
+		session = self.get_session()
+		sets = session.query(OsAttributeSet).all()
+		return [s.to_dict() for s in list(sets)]
+
+	def delete_os_set(self, set_id):
+		session = self.get_session()
+		with session.begin():
+			ref = self._get_os_set(session, set_id)
+			session.delete(ref)
+			session.flush()
+
+	# Associations
+	def create_os_assoc(self, context, os_assoc_id, os_assoc_ref):
+		session = self.get_session()
+		with session.begin():
+			assoc = OsAttributeAssociation.from_dict(os_assoc_ref)
+			session.add(assoc)
+			session.flush()
+		return assoc.to_dict()
+
+	def get_os_assoc(self, assoc_id):
+		session = self.get_session()
+		return self._get_os_assoc(session, assoc_id).to_dict()
+
+	def _get_os_assoc(self, session, assoc_id):
+		try:
+			return session.query(OsAttributeAssociation).filter_by(id=assoc_id).one()
+		except sql.NotFound:
+			raise exception.ServiceNotFound(id=assoc_id)
+
+	def list_os_assocs(self):
+		session = self.get_session()
+		assocs = session.query(OsAttributeAssociation).all()
+		return [s.to_dict() for s in list(assocs)]
+
+	def delete_os_assoc(self, assoc_id):
+		session = self.get_session()
+		with session.begin():
+			ref = self._get_os_assoc(session, assoc_id)
+			session.delete(ref)
+			session.flush()
+
+	# Possibly the wrong way to do this, and likely not the prettiest - 
+	# suggestions welcome. Kristy
+	# Get an internal (OS attribute)
+	def _get_os_att(self, session, att_id, type):
+		if type == "tenant":
+			try:
+				ref =  session.query(identity.Tenant).filter_by(id=att_id).one().to_dict()
+				ref['type'] = type
+				return ref
+			except sql.NotFound:
+				raise exception.ServiceNotFound(id=att_id)
+		if type == "role":
+			try:
+				ref =  session.query(identity.Role).filter_by(id=att_id).one().to_dict()
+				ref['type'] = type
+				return ref
+			except sql.NotFound:
+				raise exception.ServiceNotFound(id=att_id)
+		if type == "domain":
+			raise exception.NotImplemented()
 
 class OrgAttributeSet(sql.ModelBase, sql.DictBase):
     __tablename__ = 'org_attribute_set'
@@ -165,3 +258,65 @@ class OrgAttributeAssociation(sql.ModelBase, sql.DictBase):
 		extra_copy['org_attribute_id'] = self.org_attribute_id
 		extra_copy['org_attribute_set_id'] = self.org_attribute_set_id
 		return extra_copy
+
+
+class OsAttributeSet(sql.ModelBase, sql.DictBase):
+	__tablename__ = 'os_attribute_set'
+	id = sql.Column(sql.String(64), primary_key=True)
+	extra = sql.Column(sql.JsonBlob())
+
+	@classmethod
+	def from_dict(cls, service_dict):
+		extra = {}
+		for k, v in service_dict.copy().iteritems():
+			if k not in ['id', 'extra']:
+				extra[k] = service_dict.pop(k)
+
+		service_dict['extra'] = extra
+		return cls(**service_dict)
+
+	def to_dict(self):
+		extra_copy = self.extra.copy()
+		extra_copy['id'] = self.id
+		return extra_copy
+
+class OsAttributeAssociation(sql.ModelBase, sql.DictBase):
+	__tablename__ = 'os_attribute_association'
+	id = sql.Column(sql.String(64), primary_key=True)
+	attribute_id = sql.Column(sql.String(64))
+	os_attribute_set_id = sql.Column(sql.String(64),  sql.ForeignKey('os_attribute_set.id'))
+	type = sql.Column(sql.String(255))	
+
+	@classmethod
+	def from_dict(cls, service_dict):
+		extra = {}
+		for k, v in service_dict.copy().iteritems():
+			if k not in ['id', 'os_attribute_set_id', 'attribute_id', 'type']:
+				extra[k] = service_dict.pop(k)
+
+		return cls(**service_dict)
+
+	def to_dict(self):
+		extra_copy = {}
+		extra_copy['id'] = self.id
+		extra_copy['attribute_id'] = self.attribute_id
+		extra_copy['os_attribute_set_id'] = self.os_attribute_set_id
+		extra_copy['type'] = self.type
+		return extra_copy
+
+class AttributeMapping(sql.ModelBase, sql.DictBase):
+	__tablename__ = 'attribute_mapping'
+	id = sql.Column(sql.String(64), primary_key=True)
+	org_attribute_set_id = sql.Column(sql.String(64),  sql.ForeignKey('org_attribute_set.id'))
+	os_attribute_set_id = sql.Column(sql.String(64),  sql.ForeignKey('os_attribute_set.id'))
+
+	@classmethod
+	def from_dict(cls, mapping_dict):
+		return cls(**service_dict)
+
+    def to_dict(self):
+        extra_copy = {}
+        extra_copy['id'] = self.id
+        extra_copy['org_attribute_set_id'] = self.org_attribute_id
+        extra_copy['os_attribute_set_id'] = self.os_attribute_set_id
+        return extra_copy

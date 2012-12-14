@@ -73,9 +73,21 @@ def upgrade(migrate_engine):
 				Column('os_attribute_set_id', sql.String(64),
 						sql.ForeignKey('os_attribute_set.id'),
 						nullable=False),
-				Column('type', sql.String(255))
+				Column('type', sql.String(255)))
 
 	os_attribute_association.create(migrate_engine, checkfirst=True)
+
+	# Attribute Mapping
+	attribute_mapping = Table('attribute_mapping', meta,
+				Column('id', sql.String(64), primary_key=True),
+				Column('os_attribute_set_id', sql.String(64),
+						sql.ForeignKey('os_attribute_set.id'),
+						nullable=False),
+				Column('org_attribute_set_id', sql.String(64),
+						sql.ForeignKey('org_attribute_set.id'),
+						nullable=False))
+
+	attribute_mapping.create(migrate_engine, checkfirst=True)
 	
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
