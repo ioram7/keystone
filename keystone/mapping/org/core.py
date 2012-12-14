@@ -25,11 +25,11 @@ class OrgMappingController(wsgi.Application):
 		LOG.debug("Deleting set with ID: " + str(set_id))
 		self.mapping_api.delete_org_set(set_id)
 
-	def create_org_set(self, context, orgattributeset):
-		LOG.debug("Creating set: " + str(orgattributeset))
+	def create_org_set(self, context, org_attribute_set):
+		LOG.debug("Creating set: " + str(org_attribute_set))
 		self.assert_admin(context)
 		set_id = uuid.uuid4().hex
-		set_ref = orgattributeset.copy()
+		set_ref = org_attribute_set.copy()
 		set_ref['id'] = set_id
 		new_set_ref = self.mapping_api.create_org_set(context, set_id, set_ref)
 		return {'orgattributeset': new_set_ref}
@@ -54,6 +54,28 @@ class OrgMappingController(wsgi.Application):
 		attribute_ref['id'] = attribute_id
 		new_attribute_ref = self.mapping_api.create_org_att(context, attribute_id, attribute_ref)
 		return {'orgattributeset': new_attribute_ref}
+	
+	# Attributes
+	def get_org_assocs(self, context, assoc_id = None):
+		if assoc_id:
+			LOG.debug("Retrieving Organisational Attribute with ID: "+ str(assoc_id))
+			return {'orgattributeassociation': self.mapping_api.get_org_assoc(context, assoc_id)}
+		LOG.debug("Retrieving Organisational Attributes")
+		assocs = self.mapping_api.list_org_assocs()
+		return {'orgattributeassociations': assocs}
+
+	def delete_org_assoc(self, context, assoc_id):
+		LOG.debug("Deleting org attribute association with ID: " + str(assoc_id))
+		self.mapping_api.delete_org_att(assoc_id)
+
+	def create_org_assoc(self, context, orgattributeassociation):
+		LOG.debug("Creating attribute: " + str(orgattributeassociation))
+		self.assert_admin(context)
+		assoc_id = uuid.uuid4().hex
+		assoc_ref = orgattributeassociation.copy()
+		assoc_ref['id'] = assoc_id
+		new_assoc_ref = self.mapping_api.create_org_assoc(context, assoc_id, assoc_ref)
+		return {'orgattributeassociation': new_assoc_ref}
 
 class OrgMappingManager(manager.Manager):
 	def __init__(self):
@@ -83,3 +105,16 @@ class OrgMappingManager(manager.Manager):
 
 	def delete_org_att(self, attribute_id):
 		self.driver.delete_org_att(attribute_id)
+
+	# Associations
+	def create_org_assoc(self, context, assoc_id, assoc_ref):
+		return self.driver.create_org_assoc(context, assoc_id, assoc_ref)
+
+	def get_org_assoc(self, context, assoc_id):
+		return self.driver.get_org_assoc(assoc_id)
+
+	def list_org_assocs(self):
+		return self.driver.list_org_assocs()
+
+	def delete_org_att(self, assoc_id):
+		self.driver.delete_org_assoc(assoc_id)

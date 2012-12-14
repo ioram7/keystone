@@ -29,24 +29,24 @@ import keystone.identity.backends.sql
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine; bind
     # migrate_engine to your metadata
-    meta = MetaData()
-    meta.bind = migrate_engine
+	meta = MetaData()
+	meta.bind = migrate_engine
 
-    sql.ModelBase.metadata.create_all(migrate_engine)
+	sql.ModelBase.metadata.create_all(migrate_engine)
 
-    org_attribute_set = Table('org_attribute_set', meta,
+	org_attribute_set = Table('org_attribute_set', meta,
                   Column('id', sql.String(64), primary_key=True),
                   Column('extra', sql.JsonBlob()))
 
-    org_attribute_set.create(migrate_engine, checkfirst=True)
+	org_attribute_set.create(migrate_engine, checkfirst=True)
 
-    org_attribute = Table('org_attribute', meta,
+	org_attribute = Table('org_attribute', meta,
 				Column('id', sql.String(64), primary_key=True),
 				Column('type', sql.String(255)),
 				Column('value', sql.String(255)),
 				Column('extra', sql.JsonBlob()))
 
-    org_attribute.create(migrate_engine, checkfirst=True)
+	org_attribute.create(migrate_engine, checkfirst=True)
 	
 	org_attribute_association = Table('org_attribute_association', meta,
 				Column('id', sql.String(64), primary_key=True),
@@ -59,6 +59,24 @@ def upgrade(migrate_engine):
 
 	org_attribute_association.create(migrate_engine, checkfirst=True)
 
+	# Openstack attributes
+	os_attribute_set = Table('os_attribute_set', meta,
+				Column('id', sql.String(64), primary_key=True),
+				Column('extra', sql.JsonBlob()))
+
+	os_attribute_set.create(migrate_engine, checkfirst=True)
+
+	os_attribute_association = Table('os_attribute_association', meta,
+				Column('id', sql.String(64), primary_key=True),
+				Column('attribute_id', sql.String(64),
+					nullable=False),
+				Column('os_attribute_set_id', sql.String(64),
+						sql.ForeignKey('os_attribute_set.id'),
+						nullable=False),
+				Column('type', sql.String(255))
+
+	os_attribute_association.create(migrate_engine, checkfirst=True)
+	
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
     pass

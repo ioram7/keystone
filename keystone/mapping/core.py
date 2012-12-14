@@ -61,6 +61,24 @@ class MappingExtension(wsgi.ExtensionRouter):
 			action='create_org_att',
 			conditions=dict(method=['POST']))
 
+		# Org Associations
+		mapper.connect('/mappings/orgattributeassociation',
+			controller=org_mapping_controller,
+			action='get_org_assocs',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/orgattributeassociation/{assoc_id}',
+			controller=org_mapping_controller,
+			action='get_org_assocs',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/orgattributeassociation/{assoc_id}',
+			controller=org_mapping_controller,
+			action='delete_org_assoc',
+			conditions=dict(method=['DELETE']))
+		mapper.connect('/mappings/orgattributeassociation',
+			controller=org_mapping_controller,
+			action='create_org_assoc',
+			conditions=dict(method=['POST']))
+
 class Driver(object):
 	
 	def list_org_sets(self):
