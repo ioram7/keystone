@@ -153,7 +153,11 @@ class CVM_Engine(object):
         LOG.debug(self.conf)
         body = req.body
         data = simplejson.loads(body)
-        attributesAssertion = {'permisRole': 'staff', 'uid' : 'userUID1234', 'idp': 'kent.ac.uk', 'other': 'blablabla'}
+        attributesAssertion = {
+            'permisRole': 'staff',
+            'uid' : 'userUID1234',
+            'idp': 'kent.ac.uk',
+            'other': 'blablabla'}
         return self.engine(data, attributesAssertion)
         #return self.response_list_tenants('jonny')
         return self.app(req)
@@ -167,7 +171,7 @@ class CVM_Engine(object):
                 userAttributes: set of validated attributes coming from the
                     SAML Response from the IDP
                 data:  information coming with the request
-                tenant_id: optional parameter where the tenant_id is already known
+                tenant_id: optional parameter when the tenant_id is given
 
         '''
         realm = data['realm']
@@ -177,7 +181,12 @@ class CVM_Engine(object):
         if userAttributes is None:
             ''' !!! This is used only for developing tests
             '''
-            userAttributes = {'uid': 'userUID1234', 'permisRole': 'staff', 'eduPersonTargettedID' : 'userUID1234', 'idp': 'kent.ac.uk', 'other': 'blablabla'}
+            userAttributes = {
+                'uid': 'userUID1234',
+                'permisRole': 'staff',
+                'eduPersonTargettedID' : 'userUID1234',
+                'idp': 'kent.ac.uk',
+                'other': 'blablabla'}
 
         self.allAttributes = userAttributes
         user_name = self.get_userName(userAttributes, realm)
@@ -201,13 +210,17 @@ class CVM_Engine(object):
        
     def response_Error(self):
         resp = webob.Response(content_type = 'application/json')
-        response = {'Error':{'code': '666','message': 'The user does not own enough attributes'}}
+        response = {'Error': {
+                    'code': '666',
+                    'message': 'The user does not own enough attributes'}}
         resp.body = json.dumps(response)
         return resp
 
     def response_ErrorForToken(self):
         resp = webob.Response(content_type = 'application/json')
-        response = {'Error':{'code': '666','message': 'The user is not authorised to use this token ID.'}}
+        response = {'Error':{
+                    'code': '666',
+                    'message': 'User is not authorised to use this token ID.'}}
         resp.body = json.dumps(response)
         return resp
 
@@ -237,7 +250,8 @@ class CVM_Engine(object):
         user = {}
         context = self.get_context()
         try:
-            ret = self.identity.identity_api.get_user_by_name(context, user_name)
+            ret = self.identity.identity_api.get_user_by_name(
+                    context, user_name)
             if ret is None:
                 raise UserNotFound(user_id = user_name)
             user['name'] = ret['name']
@@ -276,7 +290,8 @@ class CVM_Engine(object):
         tenant = {}
         context = self.get_context()
         try:
-            ret = self.identity.identity_api.get_tenant_by_name(context, tenant_name)
+            ret = self.identity.identity_api.get_tenant_by_name(
+                context, tenant_name)
             if ret is None:
                 raise TenantNotFound(tenant_id = tenant_name)
         except TenantNotFound:
@@ -302,7 +317,7 @@ class CVM_Engine(object):
             Return the concatenation of the user attributes according to
             the attributes configured in the config file.
 
-                 userAttributes: contains the attributes coming from the SAML Response
+                 userAttributes: contains the attributes from the SAML Response
 
             !!! IMPORTANT: this method doen't support multiple attribute
                 values. This is a TODO!
@@ -318,7 +333,7 @@ class CVM_Engine(object):
                 values = confAtt[set][att]
                 if userAttributes.has_key(att):
                     if values[0] is None or values[0] == userAttributes[att][0]:
-                        str += att+userAttributes[att][0]
+                        str += att + userAttributes[att][0]
                         count = count + 1
             if count == len(confAtt[set]):
                 valid[set] = str
@@ -346,7 +361,8 @@ class CVM_Engine(object):
             ten = self.get_tenant_by_name(value)
             context = self.get_context()
             if ten is None:
-                newTenant = self.identity.create_tenant(context, {'name': value})
+                newTenant = self.identity.create_tenant(
+                    context, {'name': value})
                 ten = {}
                 ten['name'] = newTenant['tenant']['name']
                 ten['id'] = newTenant['tenant']['id']
@@ -354,8 +370,8 @@ class CVM_Engine(object):
 
             if not self.is_linked(ten['id'], user_id):
                 self.link_user_to_tenant(ten['id'], user_id)
-
-            self.check_roles(user_id, ten['id'],ten['friendlyName'],conf_attributes)
+            fn = ten['friendlyName']
+            self.check_roles(user_id, ten['id'],fn,conf_attributes)
 
             filt_tenants.append(ten)
         return filt_tenants
@@ -383,7 +399,8 @@ class CVM_Engine(object):
                     if value is None:
                         count = count + 1
                     else:
-                        if not value is None and conf_attributes[attType] == value:
+                        confAttType = conf_attributes[attType]
+                        if not value is None and confAttType == value:
                             count = count + 1
         if count == len(attr):
                 res.append(role)
@@ -397,7 +414,9 @@ class CVM_Engine(object):
         for role in roles:
             if not self.check_user_roles(role, user_id, tenant_id):
                 newRole = self.get_role(role)
-                newRole = self.role.add_role_to_user(context, user_id, newRole['id'], tenant_id)
+                role_id = newRole['id']
+                newRole = self.role.add_role_to_user(
+                    context, user_id, role_id, tenant_id)
                 r = newRole['role']
                 LOG.info('New Role Linked')
                 LOG.info(r.name)
@@ -456,10 +475,12 @@ class AttributeConfigParser:
                 if att.tag == "AttributeMapping":
                     for field in att.iter():
                         if field.tag == "Attribute":
-                            if field.get("Value") is None:
-                                attribute[field.get("Name")] = None
+                            nm = field.get("Name")
+                            val = field.get("Value")
+                            if val is None:
+                                attribute[nm] = None
                             else:
-                                attribute[field.get("Name")] = field.get("Value")
+                                attribute[nm] = val
                         if field.tag == "RoleGranted":
                             role = field.text
                     attlist[role] = attribute
@@ -468,7 +489,8 @@ class AttributeConfigParser:
             return res
 
         def getSets(self):
-                return self.tree.getroot().find("SetOfTenants").findall("Tenant")
+            element = self.tree.getroot().find("SetOfTenants")
+            return element.findall("Tenant")
 
         def getAttributesForSet(self, setName):
             element = None
@@ -495,14 +517,15 @@ class AttributeConfigParser:
                 name = ""
                 for att in set:
                     if att.tag == "Attribute":
-                        name = name+att.get("Name")
+                        name = name + att.get("Name")
                 tenantSets[friendly] = name
             return tenantSets
 
         def getSetsAndAtts(self):
             sets = {}
             for set in self.getSets():
-                sets[set.get("DisplayName")] = self.getAttributesForSet(set.get("DisplayName"))
+                displayName = set.get("DisplayName")
+                sets[displayName] = self.getAttributesForSet(displayName)
             return sets
 
         def getAttributes(self):
@@ -512,7 +535,7 @@ class AttributeConfigParser:
                 for att in set.findall("Attribute"):
                     name = att.get("Name")
                     if not name in atts:
-                        atts.append(name)   
+                        atts.append(name)
             return atts
 
         def getPID(self, idp):
