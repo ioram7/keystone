@@ -99,7 +99,7 @@ class MyManager(manager.Manager):
 
     """
 
-    def __init__(self,driver):
+    def __init__(self, driver):
         super(MyManager, self).__init__(driver)
 
 
@@ -153,12 +153,12 @@ class CVM_Engine(object):
         LOG.debug(self.conf)
         body = req.body
         data = simplejson.loads(body)
-        attributesAssertion = {'permisRole': 'staff', 'uid' :'userUID1234', 'idp': 'kent.ac.uk', 'other': 'blablabla'}
-        return self.engine(data,attributesAssertion)
+        attributesAssertion = {'permisRole': 'staff', 'uid' : 'userUID1234', 'idp': 'kent.ac.uk', 'other': 'blablabla'}
+        return self.engine(data, attributesAssertion)
         #return self.response_list_tenants('jonny')
         return self.app(req)
 
-    def engine(self,data, userAttributes):
+    def engine(self, data, userAttributes):
         '''
             The engine method for the middleware. It Creates
             user and tenants. It linkes them together accoding to
@@ -177,10 +177,10 @@ class CVM_Engine(object):
         if userAttributes is None:
             ''' !!! This is used only for developing tests
             '''
-            userAttributes = {'uid': 'userUID1234', 'permisRole': 'staff', 'eduPersonTargettedID' :'userUID1234', 'idp': 'kent.ac.uk', 'other': 'blablabla'}
+            userAttributes = {'uid': 'userUID1234', 'permisRole': 'staff', 'eduPersonTargettedID' : 'userUID1234', 'idp': 'kent.ac.uk', 'other': 'blablabla'}
 
         self.allAttributes = userAttributes
-        user_name = self.get_userName(userAttributes,realm)
+        user_name = self.get_userName(userAttributes, realm)
         if user_name is None:
             return self.response_Error()
         # create the user if it doen't exist
@@ -196,18 +196,18 @@ class CVM_Engine(object):
         LOG.debug(tenants)
         unsToken = self.create_UnscopeToken()
         LOG.debug('UnscopedToken created : '+unsToken)
-        return self.response_list_tenants(tenants,unsToken)
+        return self.response_list_tenants(tenants, unsToken)
 
        
     def response_Error(self):
         resp = webob.Response(content_type='application/json')
-        response = {'Error':{'code':'666','message':'The user does not own enough attributes'}}
+        response = {'Error':{'code': '666','message': 'The user does not own enough attributes'}}
         resp.body = json.dumps(response)
         return resp
 
     def response_ErrorForToken(self):
         resp = webob.Response(content_type='application/json')
-        response = {'Error':{'code':'666','message':'The user is not authorised to use this token ID.'}}
+        response = {'Error':{'code': '666','message': 'The user is not authorised to use this token ID.'}}
         resp.body = json.dumps(response)
         return resp
 
@@ -223,8 +223,8 @@ class CVM_Engine(object):
             idpname = realm['name']
         idp = realm["service_id"]
         pid = self.confParser.getPID(idpname)
-    if pid == None:
-        pid = self.confParser.getPID("default")
+        if pid == None:
+            pid = self.confParser.getPID("default")
         userAttributes = dict(userAttributes)
         if userAttributes.has_key(pid):
             s = hashlib.sha1()
@@ -234,22 +234,22 @@ class CVM_Engine(object):
             return None
 
   
-    def create_user(self,user_name):
+    def create_user(self, user_name):
         user = {}
         context = self.get_context()
         try:
-            ret = self.identity.identity_api.get_user_by_name(context,user_name)
+            ret = self.identity.identity_api.get_user_by_name(context, user_name)
             if ret is None:
                 raise UserNotFound(user_id=user_name)
-            user['name']=ret['name']
-            user['id']=ret['id']
+            user['name'] = ret['name']
+            user['id'] = ret['id']
         except UserNotFound:
-            ret = self.users.create_user(context,{'name':user_name})
+            ret = self.users.create_user(context,{'name': user_name})
             user['name'] = ret['user']['name']
             user['id'] = ret['user']['id']
         return user
 
-    def response_list_tenants(self, tenants,unscopeToken):
+    def response_list_tenants(self, tenants, unscopeToken):
         resp = webob.Response(content_type='application/json')
         response = {}
         response['tenants'] = tenants
@@ -257,7 +257,7 @@ class CVM_Engine(object):
         resp.body = json.dumps(response)
         return resp
 
-    def link_user_to_tenant(self,tenant_id,user_id):
+    def link_user_to_tenant(self, tenant_id, user_id):
         context = self.get_context()
         user = self.users.get_user(context, user_id)
         user = user['user']
@@ -277,7 +277,7 @@ class CVM_Engine(object):
         tenant = {}
         context = self.get_context()
         try:
-            ret = self.identity.identity_api.get_tenant_by_name(context,tenant_name)
+            ret = self.identity.identity_api.get_tenant_by_name(context, tenant_name)
             if ret is None:
                 raise TenantNotFound(tenant_id=tenant_name)
         except TenantNotFound:
@@ -325,14 +325,14 @@ class CVM_Engine(object):
                 valid[set]=str
         return valid
 
-    def is_permittedTenant(self,conf_attributes,tenant_id):
+    def is_permittedTenant(self, conf_attributes, tenant_id):
         user_id = self.me['id']
         ca = dict(conf_attributes)
         context = self.get_context()
         ten = self.identity.get_tenant(context, tenant_id)
         LOG.info('tenant')
         LOG.info(ten)
-        for attr,value in ca.iteritems():
+        for attr, value in ca.iteritems():
             if ten['tenant']['name']==value:
                 return True
         return False
@@ -347,7 +347,7 @@ class CVM_Engine(object):
             ten = self.get_tenant_by_name(value)
             context = self.get_context()
             if ten is None:
-                newTenant = self.identity.create_tenant(context, {'name':value})
+                newTenant = self.identity.create_tenant(context, {'name': value})
                 ten={}
                 ten['name'] = newTenant['tenant']['name']
                 ten['id'] = newTenant['tenant']['id']
@@ -361,7 +361,7 @@ class CVM_Engine(object):
             filt_tenants.append(ten)
         return filt_tenants
 
-    def get_available_roles(self,fn,conf_attributes):
+    def get_available_roles(self, fn, conf_attributes):
         conf_attributes = self.allAttributes
         LOG.info("Finding roles for tenant: " + fn)
         roles = self.confParser.getMappedAttributefForSet(fn)
@@ -370,11 +370,11 @@ class CVM_Engine(object):
         res = []
         roles = dict(roles)
         conf_attributes = dict(conf_attributes)
-        for role,attr in roles.iteritems():
+        for role, attr in roles.iteritems():
             LOG.info("Role "+role)
             LOG.info(attr)
             count = 0
-            for role,attrib in attr.iteritems():
+            for role, attrib in attr.iteritems():
                 LOG.info(role)
                 LOG.info(attrib)
                 attType = attrib.keys()[0]
@@ -390,8 +390,8 @@ class CVM_Engine(object):
                 res.append(role)
         return res
 
-    def check_roles(self,user_id,tenant_id,fn,conf_attributes):
-        roles = self.get_available_roles(fn,conf_attributes);
+    def check_roles(self, user_id, tenant_id, fn, conf_attributes):
+        roles = self.get_available_roles(fn, conf_attributes);
         LOG.info('Aval Roles')
         LOG.info(roles)
         context = self.get_context()
@@ -404,7 +404,7 @@ class CVM_Engine(object):
                 LOG.info(r.name)
 
    
-    def check_user_roles(self,roleName,user_id,tenant_id):
+    def check_user_roles(self, roleName, user_id, tenant_id):
         context = self.get_context()
         roles = self.role.get_user_roles(context, user_id, tenant_id)
         for role in roles['roles']:
@@ -421,7 +421,7 @@ class CVM_Engine(object):
                 retRole['name']=role['name']
                 retRole['id']=role['id']
                 return retRole
-        return self.role.create_role(context, {'name':name})['role']
+        return self.role.create_role(context, {'name': name})['role']
 
            
 
@@ -492,7 +492,7 @@ class AttributeConfigParser:
                     friendly = att.get("DisplayName")
                     if friendly == None: friendly = name
                     val = att.get("Value")
-                    values = [val,friendly]
+                    values = [val, friendly]
                     attlist[name] = values
             return attlist
 
@@ -559,7 +559,7 @@ class Config:
     def getAttributes(self):
         return self.attributes
 
-    def getPID(self,idp):
+    def getPID(self, idp):
         return self.parser.getPID(idp)
 
     def getTenantSets(self):
