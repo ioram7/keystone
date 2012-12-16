@@ -114,5 +114,85 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    # Operations to reverse the above upgrade go here.
-    pass
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    sql.ModelBase.metadata.drop_all(migrate_engine)
+
+    org_attribute_set = Table(
+        'org_attribute_set',
+        meta,
+        Column('id', sql.String(64), primary_key=True),
+        Column('extra', sql.JsonBlob()))
+
+    org_attribute_set.drop(migrate_engine, checkfirst=True)
+
+    org_attribute = Table(
+        'org_attribute',
+        meta,
+        Column('id', sql.String(64), primary_key=True),
+        Column('type', sql.String(255)),
+        Column('value', sql.String(255)),
+        Column('extra', sql.JsonBlob()))
+
+    org_attribute.drop(migrate_engine, checkfirst=True)
+
+    org_attribute_association = Table(
+        'org_attribute_association',
+        meta,
+        Column('id', sql.String(64), primary_key=True),
+        Column(
+            'org_attribute_id',
+            sql.String(64),
+            sql.ForeignKey('org_attribute.id'),
+            nullable=False),
+        Column(
+            'org_attribute_set_id',
+            sql.String(64),
+            sql.ForeignKey('org_attribute_set.id'),
+            nullable=False))
+
+    org_attribute_association.drop(migrate_engine, checkfirst=True)
+
+    # Openstack attributes
+    os_attribute_set = Table(
+        'os_attribute_set',
+        meta,
+        Column('id', sql.String(64), primary_key=True),
+        Column('extra', sql.JsonBlob()))
+
+    os_attribute_set.drop(migrate_engine, checkfirst=True)
+
+    os_attribute_association = Table(
+        'os_attribute_association',
+        meta,
+        Column('id', sql.String(64), primary_key=True),
+        Column(
+            'attribute_id',
+            sql.String(64),
+            nullable=False),
+        Column(
+            'os_attribute_set_id',
+            sql.String(64),
+            sql.ForeignKey('os_attribute_set.id'),
+            nullable=False),
+        Column('type', sql.String(255)))
+
+    os_attribute_association.drop(migrate_engine, checkfirst=True)
+
+    # Attribute Mapping
+    attribute_mapping = Table(
+        'attribute_mapping',
+        meta,
+        Column('id', sql.String(64), primary_key=True),
+        Column(
+            'os_attribute_set_id',
+            sql.String(64),
+            sql.ForeignKey('os_attribute_set.id'),
+            nullable=False),
+        Column(
+            'org_attribute_set_id',
+            sql.String(64),
+            sql.ForeignKey('org_attribute_set.id'),
+            nullable=False))
+    attribute_mapping.drop(migrate_engine, checkfirst=True)
