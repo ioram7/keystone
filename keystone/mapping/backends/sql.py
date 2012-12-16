@@ -132,6 +132,8 @@ class Mapping(sql.Base, Driver):
 	def list_os_sets(self):
 		session = self.get_session()
 		sets = session.query(OsAttributeSet).all()
+		for s in list(sets):
+			s["attributes"] = _get_os_set_details(session, s.id)
 		return [s.to_dict() for s in list(sets)]
 
 	def delete_os_set(self, set_id):
@@ -140,6 +142,10 @@ class Mapping(sql.Base, Driver):
 			ref = self._get_os_set(session, set_id)
 			session.delete(ref)
 			session.flush()
+
+	def _get_os_set_details(self, session, set_id):
+		links = session.query(OsAttributeAssociation).filter_by(os_attribute_set_id=set_id).all()
+		return [(self._get_os_att(session, s.attribute_id, s.type)) for s in list(links)]
 
 	# Associations
 	def create_os_assoc(self, context, os_assoc_id, os_assoc_ref):
@@ -192,6 +198,41 @@ class Mapping(sql.Base, Driver):
 				raise exception.ServiceNotFound(id=att_id)
 		if type == "domain":
 			raise exception.NotImplemented()
+
+	# Attribute Mapping
+	def create_mapping(self, context, mapping_id, mapping_ref):
+		session = self.get_session()
+		with session.begin():
+			mapping = AttributeMapping.from_dict(mapping_ref)
+			session.add(mapping)
+			session.flush()
+		return mapping.to_dict()
+	
+	def get_mapping(self, mapping_id):
+		session = self.get_session()
+		ref = self._get_mapping(session, mapping_id)
+		ref = ref.to_dict()
+		ref['org_attribute_set'] = self.get_org_set(ref['org_attribute_set_id'])
+		ref['os_attribute_set'] = self.get_os_set(ref['os_attribute_set_id'])
+		return ref
+
+	def _get_mapping(self, session, mapping_id):
+		try:
+			return session.query(AttributeMapping).filter_by(id=mapping_id).one()
+		except sql.NotFound:
+			raise exception.ServiceNotFound(id=mapping_id)
+	
+	def delete_mapping(self, mapping_id):
+		session = self.get_session()
+		with session.begin():
+			ref = self._get_mapping(session, mapping_id)
+			session.delete(ref)
+			session.flush()
+	
+	def list_mappings(self):
+		session = self.get_session()
+		mappings = session.query(AttributeMapping).all()
+		return [self.get_mapping(m.id) for m in list(mappings)]	
 
 class OrgAttributeSet(sql.ModelBase, sql.DictBase):
     __tablename__ = 'org_attribute_set'
@@ -312,11 +353,11 @@ class AttributeMapping(sql.ModelBase, sql.DictBase):
 
 	@classmethod
 	def from_dict(cls, mapping_dict):
-		return cls(**service_dict)
+		return cls(**mapping_dict)
 
-    def to_dict(self):
-        extra_copy = {}
-        extra_copy['id'] = self.id
-        extra_copy['org_attribute_set_id'] = self.org_attribute_id
-        extra_copy['os_attribute_set_id'] = self.os_attribute_set_id
-        return extra_copy
+	def to_dict(self):
+		extra_copy = {}
+		extra_copy['id'] = self.id
+		extra_copy['org_attribute_set_id'] = self.org_attribute_set_id
+		extra_copy['os_attribute_set_id'] = self.os_attribute_set_id
+		return extra_copy

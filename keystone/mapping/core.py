@@ -16,6 +16,7 @@
 
 from keystone.common import wsgi
 from keystone.mapping import org, os
+import controllers
 
 class MappingExtension(wsgi.ExtensionRouter):
 	"""
@@ -26,7 +27,8 @@ class MappingExtension(wsgi.ExtensionRouter):
 	def add_routes(self, mapper):
 		org_mapping_controller = org.OrgMappingController()
 		os_mapping_controller = os.OsMappingController()
-		# Role mapping operations
+		mapping_controller = controllers.AttributeMappingController()
+		# Attribute mapping operations
 		# Org Sets
 		mapper.connect('/mappings/orgattributeset',
 			controller=org_mapping_controller,
@@ -113,6 +115,28 @@ class MappingExtension(wsgi.ExtensionRouter):
 		mapper.connect('/mappings/osattributeassociation',
 			controller=os_mapping_controller,
 			action='create_os_assoc',
+			conditions=dict(method=['POST']))
+	
+		mapper.connect('/mappings',
+			controller=mapping_controller,
+			action='get_mappings',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/{mapping_id}',
+			controller=mapping_controller,
+			action='get_mappings',
+			conditions=dict(method=['GET']))
+		mapper.connect('/mappings/{mapping_id}',
+			controller=mapping_controller,
+			action='delete_mapping',
+			conditions=dict(method=['DELETE']))
+		mapper.connect('/mappings',
+			controller=mapping_controller,
+			action='create_mapping',
+			conditions=dict(method=['POST']))
+		
+		mapper.connect('/mappings/map',
+			controller=mapping_controller,
+			action='get_mappings_from_attributes',
 			conditions=dict(method=['POST']))
 
 class Driver(object):
