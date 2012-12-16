@@ -561,3 +561,4 @@ class Config:
 
     def getSetsAndAtts(self):
         return self.sets
+
