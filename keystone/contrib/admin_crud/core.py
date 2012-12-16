@@ -215,4 +215,3 @@ class CrudExtension(wsgi.ExtensionRouter):
             controller=role_controller,
             action='delete_role',
             conditions=dict(method=['DELETE']))
-		

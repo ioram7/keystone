@@ -263,7 +263,6 @@ class AdminRouter(wsgi.ComposingRouter):
                        conditions=dict(method=['GET']))
         identity_router = identity.routers.Admin()
         routers = [identity_router]
-	
 
         super(AdminRouter, self).__init__(mapper, routers)
 
@@ -440,6 +439,7 @@ class ExtensionsController(wsgi.Application):
         except KeyError:
             raise exception.NotFound(target=extension_alias)
 
+
 class PublicExtensionsController(ExtensionsController):
     pass
 
@@ -470,13 +470,6 @@ class AdminExtensionsController(ExtensionsController):
             ]
         }
 
-class RoleMappingController(wsgi.Application):
-    def __init__(self):
-	super(RoleMappingController)
-    def get_org_sets(self, context):
-	print "We called it with the context:"
-	print context
-	return {'something':'something'}
 
 @logging.fail_gracefully
 def public_app_factory(global_conf, **local_conf):

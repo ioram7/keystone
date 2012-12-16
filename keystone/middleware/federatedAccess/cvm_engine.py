@@ -16,7 +16,7 @@
  * contributors may be used to endorse or promote products derived from this
  * software without specific prior written permission.
  *
- * 2. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
+ * 2. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
  * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
  * PURPOSE ARE DISCLAIMED.
@@ -91,6 +91,7 @@ also the http heather has
 
 '''
 
+
 class MyManager(manager.Manager):
     """Default pivot point for the Identity backend.
 
@@ -104,6 +105,7 @@ class MyManager(manager.Manager):
 
 
 ATT_CONFIG_FILE = 'keystone/middleware/federatedAccess/config.xml'
+
 
 class CVM_Engine(object):
     '''
@@ -127,7 +129,7 @@ class CVM_Engine(object):
         LOG.info('Starting keystone CVM_Engine middleware')
         LOG.info('Init CVM_Engine!')
 
-    @webob.dec.wsgify(RequestClass = Request)
+    @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, req):
         '''
         def __call__(self, env, start_response):
@@ -143,7 +145,7 @@ class CVM_Engine(object):
 
         if not 'HTTP_X_AUTHENTICATION_TYPE' in req.environ:
             return self.app(req)
-        if not req.environ['HTTP_X_AUTHENTICATION_TYPE'] in  ('federated'):
+        if not req.environ['HTTP_X_AUTHENTICATION_TYPE'] in ('federated'):
             return self.app(req)
 
         LOG.debug('Print env body')
@@ -155,7 +157,7 @@ class CVM_Engine(object):
         data = simplejson.loads(body)
         attributesAssertion = {
             'permisRole': 'staff',
-            'uid' : 'userUID1234',
+            'uid': 'userUID1234',
             'idp': 'kent.ac.uk',
             'other': 'blablabla'}
         return self.engine(data, attributesAssertion)
@@ -184,7 +186,7 @@ class CVM_Engine(object):
             userAttributes = {
                 'uid': 'userUID1234',
                 'permisRole': 'staff',
-                'eduPersonTargettedID' : 'userUID1234',
+                'eduPersonTargettedID': 'userUID1234',
                 'idp': 'kent.ac.uk',
                 'other': 'blablabla'}
 
@@ -204,12 +206,11 @@ class CVM_Engine(object):
         LOG.debug('List available tenants : ')
         LOG.debug(tenants)
         unsToken = self.create_UnscopeToken()
-        LOG.debug('UnscopedToken created : '+unsToken)
+        LOG.debug('UnscopedToken created : ' + unsToken)
         return self.response_list_tenants(tenants, unsToken)
 
-       
     def response_Error(self):
-        resp = webob.Response(content_type = 'application/json')
+        resp = webob.Response(content_type='application/json')
         response = {'Error': {
                     'code': '666',
                     'message': 'The user does not own enough attributes'}}
@@ -217,8 +218,8 @@ class CVM_Engine(object):
         return resp
 
     def response_ErrorForToken(self):
-        resp = webob.Response(content_type = 'application/json')
-        response = {'Error':{
+        resp = webob.Response(content_type='application/json')
+        response = {'Error': {
                     'code': '666',
                     'message': 'User is not authorised to use this token ID.'}}
         resp.body = json.dumps(response)
@@ -236,12 +237,12 @@ class CVM_Engine(object):
             idpname = realm['name']
         idp = realm["service_id"]
         pid = self.confParser.getPID(idpname)
-        if pid == None:
+        if pid is None:
             pid = self.confParser.getPID("default")
         userAttributes = dict(userAttributes)
-        if userAttributes.has_key(pid):
+        if pid in userAttributes:
             s = hashlib.sha1()
-            s.update(userAttributes[pid][0]+idp)
+            s.update(userAttributes[pid][0] + idp)
             return s.hexdigest()
         else:
             return None
@@ -251,19 +252,19 @@ class CVM_Engine(object):
         context = self.get_context()
         try:
             ret = self.identity.identity_api.get_user_by_name(
-                    context, user_name)
+                context, user_name)
             if ret is None:
-                raise UserNotFound(user_id = user_name)
+                raise UserNotFound(user_id=user_name)
             user['name'] = ret['name']
             user['id'] = ret['id']
         except UserNotFound:
-            ret = self.users.create_user(context,{'name': user_name})
+            ret = self.users.create_user(context, {'name': user_name})
             user['name'] = ret['user']['name']
             user['id'] = ret['user']['id']
         return user
 
     def response_list_tenants(self, tenants, unscopeToken):
-        resp = webob.Response(content_type = 'application/json')
+        resp = webob.Response(content_type='application/json')
         response = {}
         response['tenants'] = tenants
         response['unscopedToken'] = unscopeToken
@@ -283,7 +284,7 @@ class CVM_Engine(object):
         users = self.identity.get_tenant_users(context, tenant_id)
         for user in users['users']:
             if user['id'] == user_id:
-                return True           
+                return True
         return False
 
     def get_tenant_by_name(self, tenant_name):
@@ -293,7 +294,7 @@ class CVM_Engine(object):
             ret = self.identity.identity_api.get_tenant_by_name(
                 context, tenant_name)
             if ret is None:
-                raise TenantNotFound(tenant_id = tenant_name)
+                raise TenantNotFound(tenant_id=tenant_name)
         except TenantNotFound:
             return None
         tenant['name'] = ret['name']
@@ -331,8 +332,9 @@ class CVM_Engine(object):
             jok = confAtt[set]
             for att in jok:
                 values = confAtt[set][att]
-                if userAttributes.has_key(att):
-                    if values[0] is None or values[0] == userAttributes[att][0]:
+                if att in userAttributes:
+                    val = values[0]
+                    if val is None or val == userAttributes[att][0]:
                         str += att + userAttributes[att][0]
                         count = count + 1
             if count == len(confAtt[set]):
@@ -357,7 +359,7 @@ class CVM_Engine(object):
         LOG.info('get_available_tenants:')
         LOG.info(conf_attributes)
         ca = dict(conf_attributes)
-        for attr,value in ca.iteritems():
+        for attr, value in ca.iteritems():
             ten = self.get_tenant_by_name(value)
             context = self.get_context()
             if ten is None:
@@ -371,7 +373,7 @@ class CVM_Engine(object):
             if not self.is_linked(ten['id'], user_id):
                 self.link_user_to_tenant(ten['id'], user_id)
             fn = ten['friendlyName']
-            self.check_roles(user_id, ten['id'],fn,conf_attributes)
+            self.check_roles(user_id, ten['id'], fn, conf_attributes)
 
             filt_tenants.append(ten)
         return filt_tenants
@@ -386,7 +388,7 @@ class CVM_Engine(object):
         roles = dict(roles)
         conf_attributes = dict(conf_attributes)
         for role, attr in roles.iteritems():
-            LOG.info("Role "+role)
+            LOG.info("Role " + role)
             LOG.info(attr)
             count = 0
             for role, attrib in attr.iteritems():
@@ -407,7 +409,7 @@ class CVM_Engine(object):
         return res
 
     def check_roles(self, user_id, tenant_id, fn, conf_attributes):
-        roles = self.get_available_roles(fn, conf_attributes);
+        roles = self.get_available_roles(fn, conf_attributes)
         LOG.info('Aval Roles')
         LOG.info(roles)
         context = self.get_context()
@@ -441,9 +443,10 @@ class CVM_Engine(object):
         return self.role.create_role(context, {'name': name})['role']
 
     def get_context(self):
-        context = {'query_string':{'limit':100000,'Marker':0}}
+        context = {'query_string': {'limit': 100000, 'Marker': 0}}
         context['is_admin'] = True
         return context
+
 
 def filter_factory(global_conf, **local_conf):
     """Returns a WSGI filter app for use with paste.deploy."""
@@ -455,6 +458,7 @@ def filter_factory(global_conf, **local_conf):
     return auth_filter
 
 import xml.etree.ElementTree as ET
+
 
 class AttributeConfigParser:
         def __init__(self, file):
@@ -468,7 +472,8 @@ class AttributeConfigParser:
                 if set.get("DisplayName") == setName:
                     element = set
                 attlist = {}
-            if element == None: return attlist
+            if element is None:
+                return attlist
             for att in element.iter():
                 role = ''
                 attribute = {}
@@ -498,13 +503,15 @@ class AttributeConfigParser:
                 if set.get("DisplayName") == setName:
                     element = set
             attlist = {}
-            if element == None: return attlist
+            if element is None:
+                return attlist
             for att in element:
                 if att.tag == "Attribute":
                     values = {}
                     name = att.get("Name")
                     friendly = att.get("DisplayName")
-                    if friendly == None: friendly = name
+                    if friendly is None:
+                        friendly = name
                     val = att.get("Value")
                     values = [val, friendly]
                     attlist[name] = values

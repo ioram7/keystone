@@ -16,9 +16,10 @@ class OsMappingController(wsgi.Application):
         super(OsMappingController)
 
     # Sets
-    def get_os_sets(self, context, set_id = None):
+    def get_os_sets(self, context, set_id=None):
         if set_id:
-            return {'osattributeset': self.mapping_api.get_os_set(context, set_id)}
+            os_set = self.mapping_api.get_os_set(context, set_id)
+            return {'osattributeset': os_set}
         return {'osattributesets': self.mapping_api.list_os_sets()}
 
     def delete_os_set(self, context, set_id):
@@ -33,16 +34,16 @@ class OsMappingController(wsgi.Application):
         set_ref['id'] = set_id
         new_set_ref = self.mapping_api.create_os_set(context, set_id, set_ref)
         return {'osattributeset': new_set_ref}
-    
+
     # Associations
-    def get_os_assocs(self, context, assoc_id = None):
+    def get_os_assocs(self, context, assoc_id=None):
         if assoc_id:
-            return {'osattributeassociation': self.mapping_api.get_os_assoc(context, assoc_id)}
+            assoc = self.mapping_api.get_os_assoc(context, assoc_id)
+            return {'osattributeassociation': assoc}
         assocs = self.mapping_api.list_os_assocs()
         return {'osattributeassociations': assocs}
 
     def delete_os_assoc(self, context, assoc_id):
-        LOG.debug("Deleting os attribute association with ID: " + str(assoc_id))
         self.mapping_api.delete_os_att(assoc_id)
 
     def create_os_assoc(self, context, osattributeassociation):
@@ -51,7 +52,8 @@ class OsMappingController(wsgi.Application):
         assoc_id = uuid.uuid4().hex
         assoc_ref = osattributeassociation.copy()
         assoc_ref['id'] = assoc_id
-        new_assoc_ref = self.mapping_api.create_os_assoc(context, assoc_id, assoc_ref)
+        new_assoc_ref = self.mapping_api.create_os_assoc(
+            context, assoc_id, assoc_ref)
         return {'osattributeassociation': new_assoc_ref}
 
 
@@ -63,16 +65,16 @@ class OsMappingManager(manager.Manager):
     # Sets
     def create_os_set(self, context, set_id, set_ref):
         return self.driver.create_os_attribute_set(context, set_id, set_ref)
-    
+
     def get_os_set(self, context, set_id):
         return self.driver.get_os_set(set_id)
-    
+
     def list_os_sets(self):
         return self.driver.list_os_sets()
-    
+
     def delete_os_set(self, set_id):
         self.driver.delete_os_set(set_id)
-    
+
     # Associations
     def create_os_assoc(self, context, assoc_id, assoc_ref):
         return self.driver.create_os_assoc(context, assoc_id, assoc_ref)

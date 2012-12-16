@@ -18,7 +18,9 @@ from keystone.common import wsgi
 from keystone.mapping import org, os
 import controllers
 
+
 class MappingExtension(wsgi.ExtensionRouter):
+
     """
 
     Provides a bunch of CRUD operations for internal data types.
@@ -28,120 +30,122 @@ class MappingExtension(wsgi.ExtensionRouter):
         org_mapping_controller = org.OrgMappingController()
         os_mapping_controller = os.OsMappingController()
         mapping_controller = controllers.AttributeMappingController()
+
         # Attribute mapping operations
         # Org Sets
         mapper.connect('/mappings/orgattributeset',
-            controller=org_mapping_controller,
-            action='get_org_sets',
-            conditions=dict(method=['GET']))
+                       controller=org_mapping_controller,
+                       action='get_org_sets',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/orgattributeset/{set_id}',
-            controller=org_mapping_controller,
-            action='get_org_sets',
-            conditions=dict(method=['GET']))
+                       controller=org_mapping_controller,
+                       action='get_org_sets',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/orgattributeset/{set_id}',
-            controller=org_mapping_controller,
-            action='delete_org_set',
-            conditions=dict(method=['DELETE']))
+                       controller=org_mapping_controller,
+                       action='delete_org_set',
+                       conditions=dict(method=['DELETE']))
         mapper.connect('/mappings/orgattributeset',
-            controller=org_mapping_controller,
-            action='create_org_set',
-            conditions=dict(method=['POST']))
+                       controller=org_mapping_controller,
+                       action='create_org_set',
+                       conditions=dict(method=['POST']))
+
         # Org Attributes
         mapper.connect('/mappings/orgattributes',
-            controller=org_mapping_controller,
-            action='get_org_atts',
-            conditions=dict(method=['GET']))
+                       controller=org_mapping_controller,
+                       action='get_org_atts',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/orgattributes/{attribute_id}',
-            controller=org_mapping_controller,
-            action='get_org_atts',
-            conditions=dict(method=['GET']))
+                       controller=org_mapping_controller,
+                       action='get_org_atts',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/orgattributes/{attribute_id}',
-            controller=org_mapping_controller,
-            action='delete_org_att',
-            conditions=dict(method=['DELETE']))
+                       controller=org_mapping_controller,
+                       action='delete_org_att',
+                       conditions=dict(method=['DELETE']))
         mapper.connect('/mappings/orgattributes',
-            controller=org_mapping_controller,
-            action='create_org_att',
-            conditions=dict(method=['POST']))
+                       controller=org_mapping_controller,
+                       action='create_org_att',
+                       conditions=dict(method=['POST']))
 
         # Org Associations
         mapper.connect('/mappings/orgattributeassociation',
-            controller=org_mapping_controller,
-            action='get_org_assocs',
-            conditions=dict(method=['GET']))
+                       controller=org_mapping_controller,
+                       action='get_org_assocs',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/orgattributeassociation/{assoc_id}',
-            controller=org_mapping_controller,
-            action='get_org_assocs',
-            conditions=dict(method=['GET']))
+                       controller=org_mapping_controller,
+                       action='get_org_assocs',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/orgattributeassociation/{assoc_id}',
-            controller=org_mapping_controller,
-            action='delete_org_assoc',
-            conditions=dict(method=['DELETE']))
+                       controller=org_mapping_controller,
+                       action='delete_org_assoc',
+                       conditions=dict(method=['DELETE']))
         mapper.connect('/mappings/orgattributeassociation',
-            controller=org_mapping_controller,
-            action='create_org_assoc',
-            conditions=dict(method=['POST']))
+                       controller=org_mapping_controller,
+                       action='create_org_assoc',
+                       conditions=dict(method=['POST']))
+
         # os Sets
         mapper.connect('/mappings/osattributeset',
-            controller=os_mapping_controller,
-            action='get_os_sets',
-            conditions=dict(method=['GET']))
+                       controller=os_mapping_controller,
+                       action='get_os_sets',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/osattributeset/{set_id}',
-            controller=os_mapping_controller,
-            action='get_os_sets',
-            conditions=dict(method=['GET']))
+                       controller=os_mapping_controller,
+                       action='get_os_sets',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/osattributeset/{set_id}',
-            controller=os_mapping_controller,
-            action='delete_os_set',
-            conditions=dict(method=['DELETE']))
+                       controller=os_mapping_controller,
+                       action='delete_os_set',
+                       conditions=dict(method=['DELETE']))
         mapper.connect('/mappings/osattributeset',
-            controller=os_mapping_controller,
-            action='create_os_set',
-            conditions=dict(method=['POST']))
-    
+                       controller=os_mapping_controller,
+                       action='create_os_set',
+                       conditions=dict(method=['POST']))
+
         # os Associations
         mapper.connect('/mappings/osattributeassociation',
-            controller=os_mapping_controller,
-            action='get_os_assocs',
-            conditions=dict(method=['GET']))
+                       controller=os_mapping_controller,
+                       action='get_os_assocs',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/osattributeassociation/{assoc_id}',
-            controller=os_mapping_controller,
-            action='get_os_assocs',
-            conditions=dict(method=['GET']))
+                       controller=os_mapping_controller,
+                       action='get_os_assocs',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/osattributeassociation/{assoc_id}',
-            controller=os_mapping_controller,
-            action='delete_os_assoc',
-            conditions=dict(method=['DELETE']))
+                       controller=os_mapping_controller,
+                       action='delete_os_assoc',
+                       conditions=dict(method=['DELETE']))
         mapper.connect('/mappings/osattributeassociation',
-            controller=os_mapping_controller,
-            action='create_os_assoc',
-            conditions=dict(method=['POST']))
-    
+                       controller=os_mapping_controller,
+                       action='create_os_assoc',
+                       conditions=dict(method=['POST']))
+
         mapper.connect('/mappings',
-            controller=mapping_controller,
-            action='get_mappings',
-            conditions=dict(method=['GET']))
+                       controller=mapping_controller,
+                       action='get_mappings',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/{mapping_id}',
-            controller=mapping_controller,
-            action='get_mappings',
-            conditions=dict(method=['GET']))
+                       controller=mapping_controller,
+                       action='get_mappings',
+                       conditions=dict(method=['GET']))
         mapper.connect('/mappings/{mapping_id}',
-            controller=mapping_controller,
-            action='delete_mapping',
-            conditions=dict(method=['DELETE']))
+                       controller=mapping_controller,
+                       action='delete_mapping',
+                       conditions=dict(method=['DELETE']))
         mapper.connect('/mappings',
-            controller=mapping_controller,
-            action='create_mapping',
-            conditions=dict(method=['POST']))
-        
+                       controller=mapping_controller,
+                       action='create_mapping',
+                       conditions=dict(method=['POST']))
+
         mapper.connect('/mappings/map',
-            controller=mapping_controller,
-            action='get_mappings_from_attributes',
-            conditions=dict(method=['POST']))
+                       controller=mapping_controller,
+                       action='get_mappings_from_attributes',
+                       conditions=dict(method=['POST']))
+
 
 class Driver(object):
-    
-    def list_org_sets(self):
 
+    def list_org_sets(self):
         raise exception.NotImplemented()
-    

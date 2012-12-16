@@ -65,8 +65,10 @@ from keystone.common import manager
 
 LOG = logging.getLogger(__name__)
 
+
 class Request(webob.Request):
     pass
+
 
 class MyManager(manager.Manager):
     """Default pivot point for the Identity backend.
@@ -76,11 +78,12 @@ class MyManager(manager.Manager):
 
     """
 
-    def __init__(self,driver):
+    def __init__(self, driver):
         super(MyManager, self).__init__(driver)
 
+
 class AuthDiscover():
-    
+
     def __init__(self, app, conf):
         '''
         Constructor
@@ -92,22 +95,23 @@ class AuthDiscover():
             self.discover = self.conf['discoverClass']
             self.discover = MyManager(self.discover)
         self.ris = None
-        if 'requestIssuingClass' in self.conf: 
+        if 'requestIssuingClass' in self.conf:
             self.ris = self.conf['requestIssuingClass']
             self.ris = MyManager(self.ris)
 
-    def create_IdpRequest(self,realm):
-        return self.ris.getIdPRequest(self.ris, self.conf['requestSigningKey'], self.conf['SPName']) 
+    def create_IdpRequest(self, realm):
+        return self.ris.getIdPRequest(
+            self.ris, self.conf['requestSigningKey'], self.conf['SPName'])
 
-    def getEndpoint(self,realm):
+    def getEndpoint(self, realm):
         if type(realm) is str:
-            realm = {'name':realm}
-        return self.discover.discover(self.discover, realm) 
+            realm = {'name': realm}
+        return self.discover.discover(self.discover, realm)
 
-    def discovery(self,realm):
+    def discovery(self, realm):
         request = self.create_IdpRequest(realm)
         endPoint = self.getEndpoint(realm)
-        response = {'idpRequest':request,'idpEndpoint':endPoint}
+        response = {'idpRequest': request, 'idpEndpoint': endPoint}
         return self.valid_Response(response)
 
     def getRealmList(self):
@@ -116,12 +120,13 @@ class AuthDiscover():
 
     def response_Error(self):
         resp = webob.Response(content_type='application/json')
-        response = {'Error':{'code':'667','message':'The discover service is not implemented yet'}}
+        response = {'Error': {
+            'code': '667',
+            'message': 'The discover service is not implemented yet'}}
         resp.body = json.dumps(response)
         return resp
 
-    def valid_Response(self,response):
+    def valid_Response(self, response):
         resp = webob.Response(content_type='application/json')
         resp.body = json.dumps(response)
-        return resp    
-
+        return resp

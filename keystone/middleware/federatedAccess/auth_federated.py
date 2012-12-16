@@ -16,7 +16,7 @@
  * contributors may be used to endorse or promote products derived from this
  * software without specific prior written permission.
  *
- * 2. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
+ * 2. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
  * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
  * PURPOSE ARE DISCLAIMED.
@@ -86,21 +86,19 @@ class FederatedAuthentication(object):
 
         self.cvm = CVM_Engine(self.app, self.conf)
 
-        self.disco = AuthDiscover(app,conf)
-        self.validator = AuthValidator(app,conf)
+        self.disco = AuthDiscover(app, conf)
+        self.validator = AuthValidator(app, conf)
 
         LOG.info('Starting federated middleware wrapper')
         LOG.info('Init FederatedAuthentication!')
 
-
-
     @webob.dec.wsgify(RequestClass=Request)
-    def __call__(self,req):
+    def __call__(self, req):
         LOG.debug('Request intercepted by CVM')
         LOG.debug('--------------------------')
         if not 'HTTP_X_AUTHENTICATION_TYPE' in req.environ:
             return self.app(req)
-        if not req.environ['HTTP_X_AUTHENTICATION_TYPE'] in  ('federated'):
+        if not req.environ['HTTP_X_AUTHENTICATION_TYPE'] in ('federated'):
             return self.app(req)
 
         body = req.body

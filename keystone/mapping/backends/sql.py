@@ -22,14 +22,16 @@ class Mapping(sql.Base, Driver):
     def get_org_set(self, set_id):
         session = self.get_session()
         ref = self._get_org_set(session, set_id).to_dict()
-        links = session.query(OrgAttributeAssociation).filter_by(org_attribute_set_id=set_id).all()
-        print links
-        ref['attributes'] = [(self.get_org_att(s.org_attribute_id)) for s in list(links)]
+        links = session.query(OrgAttributeAssociation).filter_by(
+            org_attribute_set_id=set_id).all()
+        ref['attributes'] = [(self.get_org_att(
+            s.org_attribute_id)) for s in list(links)]
         return ref
 
     def _get_org_set(self, session, set_id):
         try:
-            return session.query(OrgAttributeSet).filter_by(id=set_id).one()
+            return session.query(OrgAttributeSet).filter_by(
+                id=set_id).one()
         except sql.NotFound:
             raise exception.ServiceNotFound(set_id=set_id)
 
@@ -60,7 +62,8 @@ class Mapping(sql.Base, Driver):
 
     def _get_org_att(self, session, attribute_id):
         try:
-            return session.query(OrgAttribute).filter_by(id=attribute_id).one()
+            return session.query(OrgAttribute).filter_by(
+                id=attribute_id).one()
         except sql.NotFound:
             raise exception.ServiceNotFound(id=attribute_id)
 
@@ -75,7 +78,7 @@ class Mapping(sql.Base, Driver):
             ref = self._get_org_att(session, attribute_id)
             session.delete(ref)
             session.flush()
-    
+
     # Associations
     def create_org_assoc(self, context, org_assoc_id, org_assoc_ref):
         session = self.get_session()
@@ -91,7 +94,8 @@ class Mapping(sql.Base, Driver):
 
     def _get_org_assoc(self, session, assoc_id):
         try:
-            return session.query(OrgAttributeAssociation).filter_by(id=assoc_id).one()
+            return session.query(OrgAttributeAssociation).filter_by(
+                id=assoc_id).one()
         except sql.NotFound:
             raise exception.ServiceNotFound(id=assoc_id)
 
@@ -120,13 +124,16 @@ class Mapping(sql.Base, Driver):
     def get_os_set(self, set_id):
         session = self.get_session()
         ref = self._get_os_set(session, set_id).to_dict()
-        links = session.query(OsAttributeAssociation).filter_by(os_attribute_set_id=set_id).all()
-        ref['attributes'] = [(self._get_os_att(session, s.attribute_id, s.type)) for s in list(links)]
+        links = session.query(OsAttributeAssociation).filter_by(
+            os_attribute_set_id=set_id).all()
+        ref['attributes'] = [(self._get_os_att(
+            session, s.attribute_id, s.type)) for s in list(links)]
         return ref
 
     def _get_os_set(self, session, set_id):
         try:
-            return session.query(OsAttributeSet).filter_by(id=set_id).one()
+            return session.query(OsAttributeSet).filter_by(
+                id=set_id).one()
         except sql.NotFound:
             raise exception.ServiceNotFound(set_id=set_id)
 
@@ -145,8 +152,10 @@ class Mapping(sql.Base, Driver):
             session.flush()
 
     def _get_os_set_details(self, session, set_id):
-        links = session.query(OsAttributeAssociation).filter_by(os_attribute_set_id=set_id).all()
-        return [(self._get_os_att(session, s.attribute_id, s.type)) for s in list(links)]
+        links = session.query(OsAttributeAssociation).filter_by(
+            os_attribute_set_id=set_id).all()
+        return [(self._get_os_att(
+            session, s.attribute_id, s.type)) for s in list(links)]
 
     # Associations
     def create_os_assoc(self, context, os_assoc_id, os_assoc_ref):
@@ -163,7 +172,8 @@ class Mapping(sql.Base, Driver):
 
     def _get_os_assoc(self, session, assoc_id):
         try:
-            return session.query(OsAttributeAssociation).filter_by(id=assoc_id).one()
+            return session.query(OsAttributeAssociation).filter_by(
+                id=assoc_id).one()
         except sql.NotFound:
             raise exception.ServiceNotFound(id=assoc_id)
 
@@ -179,20 +189,22 @@ class Mapping(sql.Base, Driver):
             session.delete(ref)
             session.flush()
 
-    # Possibly the wrong way to do this, and likely not the prettiest - 
+    # Possibly the wrong way to do this, and likely not the prettiest -
     # suggestions welcome. Kristy
     # Get an internal (OS attribute)
     def _get_os_att(self, session, att_id, type):
         if type == "tenant":
             try:
-                ref =  session.query(identity.Tenant).filter_by(id=att_id).one().to_dict()
+                ref = session.query(identity.Tenant).filter_by(
+                    id=att_id).one().to_dict()
                 ref['type'] = type
                 return ref
             except sql.NotFound:
                 raise exception.ServiceNotFound(id=att_id)
         if type == "role":
             try:
-                ref =  session.query(identity.Role).filter_by(id=att_id).one().to_dict()
+                ref = session.query(identity.Role).filter_by(
+                    id=att_id).one().to_dict()
                 ref['type'] = type
                 return ref
             except sql.NotFound:
@@ -208,28 +220,31 @@ class Mapping(sql.Base, Driver):
             session.add(mapping)
             session.flush()
         return mapping.to_dict()
-    
+
     def get_mapping(self, mapping_id):
         session = self.get_session()
         ref = self._get_mapping(session, mapping_id)
         ref = ref.to_dict()
-        ref['org_attribute_set'] = self.get_org_set(ref['org_attribute_set_id'])
-        ref['os_attribute_set'] = self.get_os_set(ref['os_attribute_set_id'])
+        org_id = ref['org_attribute_set_id']
+        os_id = ref['os_attribute_set_id']
+        ref['org_attribute_set'] = self.get_org_set(org_id)
+        ref['os_attribute_set'] = self.get_os_set(os_id)
         return ref
 
     def _get_mapping(self, session, mapping_id):
         try:
-            return session.query(AttributeMapping).filter_by(id=mapping_id).one()
+            return session.query(AttributeMapping).filter_by(
+                id=mapping_id).one()
         except sql.NotFound:
             raise exception.ServiceNotFound(id=mapping_id)
-    
+
     def delete_mapping(self, mapping_id):
         session = self.get_session()
         with session.begin():
             ref = self._get_mapping(session, mapping_id)
             session.delete(ref)
             session.flush()
-    
+
     def list_mappings(self):
         session = self.get_session()
         mappings = session.query(AttributeMapping).all()
@@ -285,8 +300,10 @@ class OrgAttribute(sql.ModelBase, sql.DictBase):
 class OrgAttributeAssociation(sql.ModelBase, sql.DictBase):
     __tablename__ = 'org_attribute_association'
     id = sql.Column(sql.String(64), primary_key=True)
-    org_attribute_id = sql.Column(sql.String(64), sql.ForeignKey('org_attribute.id'))
-    org_attribute_set_id = sql.Column(sql.String(64),  sql.ForeignKey('org_attribute_set.id'))
+    org_attribute_id = sql.Column(
+        sql.String(64), sql.ForeignKey('org_attribute.id'))
+    org_attribute_set_id = sql.Column(
+        sql.String(64),  sql.ForeignKey('org_attribute_set.id'))
 
     @classmethod
     def from_dict(cls, service_dict):
@@ -330,8 +347,9 @@ class OsAttributeAssociation(sql.ModelBase, sql.DictBase):
     __tablename__ = 'os_attribute_association'
     id = sql.Column(sql.String(64), primary_key=True)
     attribute_id = sql.Column(sql.String(64))
-    os_attribute_set_id = sql.Column(sql.String(64),  sql.ForeignKey('os_attribute_set.id'))
-    type = sql.Column(sql.String(255))    
+    os_attribute_set_id = sql.Column(
+        sql.String(64),  sql.ForeignKey('os_attribute_set.id'))
+    type = sql.Column(sql.String(255))
 
     @classmethod
     def from_dict(cls, service_dict):
@@ -354,8 +372,10 @@ class OsAttributeAssociation(sql.ModelBase, sql.DictBase):
 class AttributeMapping(sql.ModelBase, sql.DictBase):
     __tablename__ = 'attribute_mapping'
     id = sql.Column(sql.String(64), primary_key=True)
-    org_attribute_set_id = sql.Column(sql.String(64),  sql.ForeignKey('org_attribute_set.id'))
-    os_attribute_set_id = sql.Column(sql.String(64),  sql.ForeignKey('os_attribute_set.id'))
+    org_attribute_set_id = sql.Column(
+        sql.String(64),  sql.ForeignKey('org_attribute_set.id'))
+    os_attribute_set_id = sql.Column(
+        sql.String(64),  sql.ForeignKey('os_attribute_set.id'))
 
     @classmethod
     def from_dict(cls, mapping_dict):
