@@ -1,32 +1,32 @@
 '''
  * Copyright (c) 2011, University of Kent
  * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without 
+ *
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
- * Redistributions of source code must retain the above copyright notice, this 
+ * Redistributions of source code must retain the above copyright notice, this
  * list of conditions and the following disclaimer.
- * 
- * Redistributions in binary form must reproduce the above copyright notice, 
- * this list of conditions and the following disclaimer in the documentation 
- * and/or other materials provided with the distribution. 
  *
- * 1. Neither the name of the University of Kent nor the names of its 
- * contributors may be used to endorse or promote products derived from this 
- * software without specific prior written permission. 
+ * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
  *
- * 2. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS  
+ * 1. Neither the name of the University of Kent nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission.
+ *
+ * 2. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
  * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
- * PURPOSE ARE DISCLAIMED. 
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.
  *
- * 3. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * 3. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
@@ -57,39 +57,41 @@ import base64
 import logging
 LOG = logging.getLogger(__name__)
 
+
 class PermisValidator(object):
-    
+
     def __init__(self):
         return None
-    
+
     def __call__(self):
         return None
-        
+
     def validate(self, data):
-	resp = urlparse.parse_qsl(data['idpResponse'])
-	k, v = resp[0]
+        PREFIX = "{urn:oasis:names:tc:SAML:2.0:assertion}"
+        resp = urlparse.parse_qsl(data['idpResponse'])
+        k, v = resp[0]
         resp = base64.b64decode(v)
-	resp = etree.ElementTree(etree.fromstring(resp))
-	atts = {}
-	names = []
-        for name in resp.iter("{urn:oasis:names:tc:SAML:2.0:assertion}NameID"):
-                names.append(name.text)
+        resp = etree.ElementTree(etree.fromstring(resp))
+        atts = {}
+        names = []
+        for name in resp.iter(PREFIX + "NameID"):
+            names.append(name.text)
         if(len(names) > 0):
-                atts["NameID"] = names
-	for att in resp.iter("{urn:oasis:names:tc:SAML:2.0:assertion}Attribute"):
-	    ats = []
-	    for value in att.iter("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue"):
-		ats.append(value.text) 
-	    atts[att.get("Name")] = ats
-        return atts    
+            atts["NameID"] = names
+        for att in resp.iter(PREFIX + "Attribute"):
+            ats = []
+            for value in att.iter(PREFIX + "AttributeValue"):
+                ats.append(value.text)
+            atts[att.get("Name")] = ats
+        return atts
+
+
 def inflate(data):
-        decompress = zlib.decompressobj(
-            -zlib.MAX_WBITS  # see above
-        )
-        inflated = decompress.decompress(data)
-        inflated += decompress.flush()
-        return inflated
+    decompress = zlib.decompressobj(-zlib.MAX_WBITS)
+    inflated = decompress.decompress(data)
+    inflated += decompress.flush()
+    return inflated
+
 
 def factory():
     return PermisValidator()
-

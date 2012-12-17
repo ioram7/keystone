@@ -148,6 +148,30 @@ class UserNotFound(NotFound):
     """Could not find user: %(user_id)s"""
 
 
+class OrgAttributeSetNotFound(NotFound):
+    """Could not find organisational attribute set: %(org_attribute_set_id)s"""
+
+
+class OrgAttributeNotFound(NotFound):
+    """Could not find organisational attribute: %(id)s"""
+
+
+class OrgAttributeAssociationNotFound(NotFound):
+    """Could not find organisational attribute association: %(id)s"""
+
+
+class OsAttributeSetNotFound(NotFound):
+    """Could not find openstack attribute set: %(set_id)s"""
+
+
+class OsAttributeAssociationNotFound(NotFound):
+    """Could not find openstack attribute set: %(id)s"""
+
+
+class MappingNotFound(NotFound):
+    """Could not find mapping: %(id)s"""
+
+
 class Conflict(Error):
     """Conflict occurred attempting to store %(type)s.
 
