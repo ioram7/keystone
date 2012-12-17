@@ -4,6 +4,7 @@ from keystone.common import wsgi
 from keystone.common import manager
 from keystone.common import logging
 from keystone import config
+from keystone.mapping.core import Manager
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)

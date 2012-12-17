@@ -15,8 +15,6 @@
 # under the License.
 
 from keystone.common import wsgi
-from keystone.mapping.org import controllers as org_controllers
-from keystone.mapping.os import controllers as os_controllers
 import controllers
 
 
@@ -28,8 +26,8 @@ class MappingExtension(wsgi.ExtensionRouter):
 
     """
     def add_routes(self, mapper):
-        org_mapping_controller = org_controllers.OrgMappingController()
-        os_mapping_controller = os_controllers.OsMappingController()
+        org_mapping_controller = controllers.OrgMappingController()
+        os_mapping_controller = controllers.OsMappingController()
         mapping_controller = controllers.AttributeMappingController()
 
         # Attribute mapping operations
