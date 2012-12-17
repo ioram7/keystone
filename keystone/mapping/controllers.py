@@ -16,19 +16,20 @@ class AttributeMappingController(wsgi.Application):
         super(AttributeMappingController)
     # Sets
 
-    def get_mappings(self, context, mapping_id=None):
-        if mapping_id:
-            mapping = self.mapping_api.get_mapping(context, mapping_id)
-            return {'attribute_mapping': mapping}
-        return {'attribute_mapping': self.mapping_api.list_mappings()}
+    def get_mapping(self, context, mapping_id):
+        mapping = self.mapping_api.get_mapping(context, mapping_id)
+        return {'attribute_mappings': mapping}
+
+    def list_mappings(self, context):
+        return {'attribute_mappings': self.mapping_api.list_mappings()}
 
     def delete_mapping(self, context, mapping_id):
         self.mapping_api.delete_mapping(mapping_id)
 
-    def create_mapping(self, context, attribute_mapping):
+    def create_mapping(self, context, mapping):
         self.assert_admin(context)
         mapping_id = uuid.uuid4().hex
-        mapping_ref = attribute_mapping.copy()
+        mapping_ref = mapping.copy()
         mapping_ref['id'] = mapping_id
         new_mapping_ref = self.mapping_api.create_mapping(
             context, mapping_id, mapping_ref)
@@ -98,45 +99,49 @@ class OrgMappingController(wsgi.Application):
 
     # Attributes
 
-    def get_org_atts(self, context, attribute_id=None):
+    def get_org_atts(self, context, org_attribute_id=None):
         if attribute_id:
             att = self.mapping_api.get_org_att(context, attribute_id)
-            return {'orgattribute': att}
-        atts = self.mapping_api.list_org_atts()
-        return {'orgattributes': atts}
+            return {'org_attribute': att}
 
-    def delete_org_att(self, context, attribute_id):
+    def list_org_attributes(self, context):
+        atts = self.mapping_api.list_org_atts()
+        return {'org_attributes': atts}
+
+    def delete_org_attribute(self, context, org_attribute_id):
         self.mapping_api.delete_org_att(attribute_id)
 
-    def create_org_att(self, context, orgattribute):
+    def create_org_att(self, context, org_attribute):
         self.assert_admin(context)
         attribute_id = uuid.uuid4().hex
-        attribute_ref = orgattribute.copy()
+        attribute_ref = org_attribute.copy()
         attribute_ref['id'] = attribute_id
         new_attribute_ref = self.mapping_api.create_org_att(
             context, attribute_id, attribute_ref)
-        return {'orgattributeset': new_attribute_ref}
+        return {'org_attribute': new_attribute_ref}
 
     # Associations
 
-    def get_org_assocs(self, context, assoc_id=None):
-        if assoc_id:
-            assoc = self.mapping_api.get_org_assoc(context, assoc_id)
-            return {'orgattributeassociation': assoc}
+    def get_org_attribute_association(self, context, org_attribute_association_id=None):
+        if org_attribute_association_id:
+            assoc = self.mapping_api.get_org_assoc(context, org_attribute_association_id)
+            return {'org_attribute_association': assoc}
+
+    def list_org_attribute_associations(self, context):
         assocs = self.mapping_api.list_org_assocs()
         return {'orgattributeassociations': assocs}
 
-    def delete_org_assoc(self, context, assoc_id):
-        self.mapping_api.delete_org_att(assoc_id)
+    def delete_org_attribute_association(self, context, org_attribute_association_id):
+        self.mapping_api.delete_org_att(org_attribute_association_id)
 
-    def create_org_assoc(self, context, orgattributeassociation):
+    def create_org_attribute_association(self, context, org_attribute_association):
         self.assert_admin(context)
         assoc_id = uuid.uuid4().hex
-        assoc_ref = orgattributeassociation.copy()
+        assoc_ref = org_attribute_association.copy()
         assoc_ref['id'] = assoc_id
         new_assoc_ref = self.mapping_api.create_org_assoc(
             context, assoc_id, assoc_ref)
-        return {'orgattributeassociation': new_assoc_ref}
+        return {'org_attribute_association': new_assoc_ref}
 
 
 class OsMappingController(wsgi.Application):
@@ -147,43 +152,44 @@ class OsMappingController(wsgi.Application):
 
     # Sets
 
-    def get_os_sets(self, context, set_id=None):
-        if set_id:
+    def get_os_attribute_set(self, context, os_attribute_set_id=None):
+        if os_attribute_set_id:
             os_set = self.mapping_api.get_os_set(context, set_id)
-            return {'osattributeset': os_set}
-        return {'osattributesets': self.mapping_api.list_os_sets()}
+            return {'os_attribute_set': os_set}
 
-    def delete_os_set(self, context, set_id):
-        LOG.debug("Deleting set with ID: " + str(set_id))
-        self.mapping_api.delete_os_set(set_id)
+    def list_os_attribute_sets(self, context):
+        return {'os_attribute_sets': self.mapping_api.list_os_sets()}
+
+    def delete_os_attribute_set(self, context, os_attribute_set_id):
+        self.mapping_api.delete_os_set(os_attribute_set_id)
 
     def create_os_set(self, context, os_attribute_set):
-        LOG.debug("Creating set: " + str(os_attribute_set))
         self.assert_admin(context)
         set_id = uuid.uuid4().hex
         set_ref = os_attribute_set.copy()
         set_ref['id'] = set_id
         new_set_ref = self.mapping_api.create_os_set(context, set_id, set_ref)
-        return {'osattributeset': new_set_ref}
+        return {'os_attribute_set': new_set_ref}
 
     # Associations
 
-    def get_os_assocs(self, context, assoc_id=None):
-        if assoc_id:
-            assoc = self.mapping_api.get_os_assoc(context, assoc_id)
-            return {'osattributeassociation': assoc}
+    def get_os_attribute_association(self, context, os_attribute_association_id=None):
+        if os_attribute_association_id:
+            assoc = self.mapping_api.get_os_assoc(context, os_attribute_association_id)
+            return {'os_attribute_association': assoc}
+
+    def list_os_attribute_associations(self, context):
         assocs = self.mapping_api.list_os_assocs()
-        return {'osattributeassociations': assocs}
+        return {'os_attribute_associations': assocs}
 
-    def delete_os_assoc(self, context, assoc_id):
-        self.mapping_api.delete_os_att(assoc_id)
+    def delete_os_attribute_association(self, context, os_attribute_association_id):
+        self.mapping_api.delete_os_att(os_attribute_association_id)
 
-    def create_os_assoc(self, context, osattributeassociation):
-        LOG.debug("Creating attribute: " + str(osattributeassociation))
+    def create_os_attribute_association(self, context, os_attribute_association):
         self.assert_admin(context)
         assoc_id = uuid.uuid4().hex
-        assoc_ref = osattributeassociation.copy()
+        assoc_ref = os_attribute_association.copy()
         assoc_ref['id'] = assoc_id
         new_assoc_ref = self.mapping_api.create_os_assoc(
             context, assoc_id, assoc_ref)
-        return {'osattributeassociation': new_assoc_ref}
+        return {'os_attribute_association': new_assoc_ref}
