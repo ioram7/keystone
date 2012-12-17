@@ -77,17 +77,17 @@ class OrgMappingController(wsgi.Application):
 
     # Sets
 
-    def list_os_attribute_sets(self, context):
+    def list_org_attribute_sets(self, context):
         return {'org_attribute_sets': self.mapping_api.list_org_sets()}
 
-    def get_os_attribute_set(self, context, org_attribute_set_id):
+    def get_org_attribute_set(self, context, org_attribute_set_id):
         org_set = self.mapping_api.get_org_set(context, org_attribute_set_id)
         return {'org_attribute_set': org_set}
 
-    def delete_os_attribute_set(self, context, org_attribute_set_id):
+    def delete_org_attribute_set(self, context, org_attribute_set_id):
         self.mapping_api.delete_org_set(org_attribute_set_id)
 
-    def create_os_attribute_set(self, context, org_attribute_set):
+    def create_org_attribute_set(self, context, org_attribute_set):
         LOG.debug("Creating set: " + str(org_attribute_set))
         self.assert_admin(context)
         set_id = uuid.uuid4().hex
