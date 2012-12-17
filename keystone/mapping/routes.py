@@ -80,7 +80,7 @@ class MappingExtension(wsgi.ExtensionRouter):
                        controller=org_mapping_controller,
                        action='delete_org_assoc',
                        conditions=dict(method=['DELETE']))
-        mapper.connect('/mappings/orgattributeset/{set_id}',
+        mapper.connect('/mappings/orgattributeset',
                        controller=org_mapping_controller,
                        action='create_org_assoc',
                        conditions=dict(method=['POST']))
@@ -116,7 +116,7 @@ class MappingExtension(wsgi.ExtensionRouter):
                        controller=os_mapping_controller,
                        action='delete_os_assoc',
                        conditions=dict(method=['DELETE']))
-        mapper.connect('/mappings/osattributeset/{set_id}',
+        mapper.connect('/mappings/osattributeset',
                        controller=os_mapping_controller,
                        action='create_os_assoc',
                        conditions=dict(method=['POST']))

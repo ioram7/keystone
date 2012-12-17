@@ -125,11 +125,10 @@ class OrgMappingController(wsgi.Application):
     def delete_org_assoc(self, context, assoc_id):
         self.mapping_api.delete_org_att(assoc_id)
 
-    def create_org_assoc(self, context, set_id, orgattributeassociation):
+    def create_org_assoc(self, context, orgattributeassociation):
         self.assert_admin(context)
         assoc_id = uuid.uuid4().hex
         assoc_ref = orgattributeassociation.copy()
-        assoc_ref['org_attribute_set_id'] = set_id
         assoc_ref['id'] = assoc_id
         new_assoc_ref = self.mapping_api.create_org_assoc(
             context, assoc_id, assoc_ref)
@@ -173,12 +172,11 @@ class OsMappingController(wsgi.Application):
     def delete_os_assoc(self, context, assoc_id):
         self.mapping_api.delete_os_att(assoc_id)
 
-    def create_os_assoc(self, context, set_id, osattributeassociation):
+    def create_os_assoc(self, context, osattributeassociation):
         LOG.debug("Creating attribute: " + str(osattributeassociation))
         self.assert_admin(context)
         assoc_id = uuid.uuid4().hex
         assoc_ref = osattributeassociation.copy()
-        assoc_ref['os_attribute_set_id'] = set_id
         assoc_ref['id'] = assoc_id
         new_assoc_ref = self.mapping_api.create_os_assoc(
             context, assoc_id, assoc_ref)
