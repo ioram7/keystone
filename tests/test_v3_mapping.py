@@ -1,12 +1,13 @@
 import uuid
 
-
+import test_v3
+BASE_URL = 'http://127.0.0.1:35357/v2.0'
 class MappingTestCase(test_v3.RestfulTestCase):
     """Test mapping CRUD"""
 
     def setUp(self):
         super(MappingTestCase, self).setUp()
-
+        BASE_URL = 'http://127.0.0.1:35357/v2.0'
         self.org_attribute_set_id = uuid.uuid4().hex
         self.org_attribute_set = self.new_service_ref()
         self.org_attribute_set['id'] = self.org_attribute_set_id
