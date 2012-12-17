@@ -11,7 +11,7 @@ class Mapping(sql.Base, Driver):
 
     # Organisational
     #Sets
-    def create_org_attribute_set(self, context, org_set_id, org_set_ref):
+    def create_org_attribute_set(self, org_set_id, org_set_ref):
         session = self.get_session()
         with session.begin():
             orgset = OrgAttributeSet.from_dict(org_set_ref)
@@ -44,6 +44,8 @@ class Mapping(sql.Base, Driver):
         session = self.get_session()
         with session.begin():
             ref = self._get_org_set(session, set_id)
+            session.query(OrgAttributeAssociation).filter_by(
+                org_attribute_set_id=set_id).delete()
             session.delete(ref)
             session.flush()
 
@@ -76,6 +78,8 @@ class Mapping(sql.Base, Driver):
         session = self.get_session()
         with session.begin():
             ref = self._get_org_att(session, attribute_id)
+            session.query(OrgAttribute).filter_by(
+                org_attribute_id=attribute_id).delete()
             session.delete(ref)
             session.flush()
 
@@ -148,6 +152,8 @@ class Mapping(sql.Base, Driver):
         session = self.get_session()
         with session.begin():
             ref = self._get_os_set(session, set_id)
+            session.query(OsAttributeAssociation).filter_by(
+                os_attribute_set_id=set_id).delete()
             session.delete(ref)
             session.flush()
 

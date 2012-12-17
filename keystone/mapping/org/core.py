@@ -12,7 +12,7 @@ LOG = logging.getLogger(__name__)
 class OrgMappingController(wsgi.Application):
 
     def __init__(self):
-        self.mapping_api = OrgMappingManager()
+        self.mapping_api = Manager()
         super(OrgMappingController)
 
     # Sets
@@ -66,20 +66,21 @@ class OrgMappingController(wsgi.Application):
     def delete_org_assoc(self, context, assoc_id):
         self.mapping_api.delete_org_att(assoc_id)
 
-    def create_org_assoc(self, context, orgattributeassociation):
+    def create_org_assoc(self, context, set_id, orgattributeassociation):
         self.assert_admin(context)
         assoc_id = uuid.uuid4().hex
         assoc_ref = orgattributeassociation.copy()
+        assoc_ref['org_attribute_set_id'] = set_id
         assoc_ref['id'] = assoc_id
         new_assoc_ref = self.mapping_api.create_org_assoc(
             context, assoc_id, assoc_ref)
         return {'orgattributeassociation': new_assoc_ref}
 
 
-class OrgMappingManager(manager.Manager):
+class Manager(manager.Manager):
 
     def __init__(self):
-        super(OrgMappingManager, self).__init__(CONF.mapping.driver)
+        super(Manager, self).__init__(CONF.mapping.driver)
 
     # Sets
     def create_org_set(self, context, set_id, set_ref):

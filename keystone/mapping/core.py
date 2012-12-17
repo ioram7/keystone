@@ -69,19 +69,19 @@ class MappingExtension(wsgi.ExtensionRouter):
                        conditions=dict(method=['POST']))
 
         # Org Associations
-        mapper.connect('/mappings/orgattributeassociation',
+        mapper.connect('/mappings/org/associations',
                        controller=org_mapping_controller,
                        action='get_org_assocs',
                        conditions=dict(method=['GET']))
-        mapper.connect('/mappings/orgattributeassociation/{assoc_id}',
+        mapper.connect('/mappings/org/associations/{assoc_id}',
                        controller=org_mapping_controller,
                        action='get_org_assocs',
                        conditions=dict(method=['GET']))
-        mapper.connect('/mappings/orgattributeassociation/{assoc_id}',
+        mapper.connect('/mappings/org/associations/{assoc_id}',
                        controller=org_mapping_controller,
                        action='delete_org_assoc',
                        conditions=dict(method=['DELETE']))
-        mapper.connect('/mappings/orgattributeassociation',
+        mapper.connect('/mappings/orgattributeset/{set_id}',
                        controller=org_mapping_controller,
                        action='create_org_assoc',
                        conditions=dict(method=['POST']))
@@ -105,19 +105,19 @@ class MappingExtension(wsgi.ExtensionRouter):
                        conditions=dict(method=['POST']))
 
         # os Associations
-        mapper.connect('/mappings/osattributeassociation',
+        mapper.connect('/mappings/osattributeset/associations',
                        controller=os_mapping_controller,
                        action='get_os_assocs',
                        conditions=dict(method=['GET']))
-        mapper.connect('/mappings/osattributeassociation/{assoc_id}',
+        mapper.connect('/mappings/osattributeset/associations/{assoc_id}',
                        controller=os_mapping_controller,
                        action='get_os_assocs',
                        conditions=dict(method=['GET']))
-        mapper.connect('/mappings/osattributeassociation/{assoc_id}',
+        mapper.connect('/mappings/osattributeset/associations/{assoc_id}',
                        controller=os_mapping_controller,
                        action='delete_os_assoc',
                        conditions=dict(method=['DELETE']))
-        mapper.connect('/mappings/osattributeassociation',
+        mapper.connect('/mappings/osattributeset/{set_id}',
                        controller=os_mapping_controller,
                        action='create_os_assoc',
                        conditions=dict(method=['POST']))

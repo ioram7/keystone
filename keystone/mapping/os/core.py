@@ -12,7 +12,7 @@ LOG = logging.getLogger(__name__)
 class OsMappingController(wsgi.Application):
 
     def __init__(self):
-        self.mapping_api = OsMappingManager()
+        self.mapping_api = Manager()
         super(OsMappingController)
 
     # Sets
@@ -46,21 +46,22 @@ class OsMappingController(wsgi.Application):
     def delete_os_assoc(self, context, assoc_id):
         self.mapping_api.delete_os_att(assoc_id)
 
-    def create_os_assoc(self, context, osattributeassociation):
+    def create_os_assoc(self, context, set_id, osattributeassociation):
         LOG.debug("Creating attribute: " + str(osattributeassociation))
         self.assert_admin(context)
         assoc_id = uuid.uuid4().hex
         assoc_ref = osattributeassociation.copy()
+        assoc_ref['os_attribute_set_id'] = set_id
         assoc_ref['id'] = assoc_id
         new_assoc_ref = self.mapping_api.create_os_assoc(
             context, assoc_id, assoc_ref)
         return {'osattributeassociation': new_assoc_ref}
 
 
-class OsMappingManager(manager.Manager):
+class Manager(manager.Manager):
 
     def __init__(self):
-        super(OsMappingManager, self).__init__(CONF.mapping.driver)
+        super(Manager, self).__init__(CONF.mapping.driver)
 
     # Sets
     def create_os_set(self, context, set_id, set_ref):
