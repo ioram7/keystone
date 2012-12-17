@@ -77,11 +77,11 @@ class OrgMappingController(wsgi.Application):
     # Sets
 
     def list_org_attribute_sets(self, context):
-        return {'orgattributesets': self.mapping_api.list_org_sets()}
+        return {'org_attribute_sets': self.mapping_api.list_org_sets()}
 
     def get_org_attribute_set(self, context, org_attribute_set_id):
         org_set = self.mapping_api.get_org_set(context, org_attribute_set_id)
-        return {'orgattributeset': org_set}
+        return {'org_attribute_set': org_set}
 
     def delete_org_attribute_set(self, context, org_attribute_set_id):
         self.mapping_api.delete_org_set(org_attribute_set_id)
@@ -94,7 +94,7 @@ class OrgMappingController(wsgi.Application):
         set_ref['id'] = set_id
         new_set_ref = self.mapping_api.create_org_set(
             context, set_ref)
-        return {'orgattributeset': new_set_ref}
+        return {'org_attribute_set': new_set_ref}
 
     # Attributes
 

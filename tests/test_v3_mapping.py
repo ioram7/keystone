@@ -17,7 +17,7 @@ class MappingTestCase(test_v3.RestfulTestCase):
 
     # service validation
 
-    def assertValidOrgAttributeListResponse(self, resp, ref):
+    def assertValidOrgAttributeSetListResponse(self, resp, ref):
         return self.assertValidListResponse(
             resp,
             'org_attribute_sets',
@@ -43,18 +43,18 @@ class MappingTestCase(test_v3.RestfulTestCase):
         r = self.post(
             '/org_attribute_sets',
             body={'org_attribute_set': ref})
-        return self.assertValidOrgAttributeSet(r, self.org_attribute_set)
+        return self.assertValidOrgAttributeSetResponse(r, ref)
 
     def test_list_org_attribute_sets(self):
         """GET /org_attribute_sets"""
         r = self.get('/org_attribute_sets')
-        self.assertValidOrgAttributeSetListResponse(r)
+        self.assertValidOrgAttributeSetListResponse(r, self.org_attribute_set)
 
     def test_get_org_attribute_set(self):
         """GET /org_attribute_sets/{org_attribute_set_id}"""
         r = self.get('/org_attribute_sets/%(set_id)s' % {
             'set_id': self.org_attribute_set_id})
-        self.assertValidOrgAttributeSetResponse(r)
+        self.assertValidOrgAttributeSetResponse(r, self.org_attribute_set)
 
     def test_delete_org_attribute_set(self):
         """DELETE /org_attribute_sets/{org_attribute_set_id}"""
