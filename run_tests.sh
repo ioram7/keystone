@@ -51,7 +51,7 @@ function process_option {
     -p|--pep8) just_pep8=1;;
     -P|--no-pep8) no_pep8=1;;
     -c|--coverage) coverage=1;;
-	-xintegration) nokeystoneclient=1;;
+    -xintegration) nokeystoneclient=1;;
     --standard-threads)
         export STANDARD_THREADS=1
         ;;
@@ -84,7 +84,7 @@ if [ $coverage -eq 1 ]; then
 fi
 
 if [ $nokeystoneclient -eq 1 ]; then
-	# disable the integration tests
+    # disable the integration tests
     noseopts="$noseopts -I test_keystoneclient*"
 fi
 
@@ -107,15 +107,14 @@ function run_tests {
 function run_pep8 {
   echo "Running pep8 ..."
   # Opt-out files from pep8
-  ignore_scripts="*.sh:"
-  ignore_files="*eventlet-patch:*pip-requires"
-  ignore_dirs="*ajaxterm*"
-  GLOBIGNORE="$ignore_scripts:$ignore_files:$ignore_dirs"
-  srcfiles=`find bin -type f ! -name .*.swp`
-  srcfiles+=" keystone tests"
+  ignore_scripts="*.pyc,*.pyo,*.sh,*.swp,*.rst"
+  ignore_files="*pip-requires"
+  ignore_dirs=".venv,.tox,dist,doc,openstack,vendor,*egg"
+  ignore="$ignore_scripts,$ignore_files,$ignore_dirs"
+  srcfiles="."
   # Just run PEP8 in current environment
   ${wrapper} pep8 --repeat --show-pep8 --show-source \
-    --exclude=vcsversion.py ${srcfiles} | tee pep8.txt
+    --exclude=${ignore} ${srcfiles} | tee pep8.txt
 }
 
 NOSETESTS="nosetests $noseopts $noseargs"

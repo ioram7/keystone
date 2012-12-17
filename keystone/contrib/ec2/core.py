@@ -44,7 +44,6 @@ from keystone import config
 from keystone import exception
 from keystone import identity
 from keystone import policy
-from keystone import service
 from keystone import token
 
 
@@ -168,6 +167,16 @@ class Ec2Controller(wsgi.Application):
             context=context,
             user_id=user_ref['id'],
             tenant_id=tenant_ref['id'])
+
+        # TODO(termie): optimize this call at some point and put it into the
+        #               the return for metadata
+        # fill out the roles in the metadata
+        roles = metadata_ref.get('roles', [])
+        if not roles:
+            raise exception.Unauthorized(message='User not valid for tenant.')
+        roles_ref = [self.identity_api.get_role(context, role_id)
+                     for role_id in roles]
+
         catalog_ref = self.catalog_api.get_catalog(
             context=context,
             user_id=user_ref['id'],
@@ -180,19 +189,10 @@ class Ec2Controller(wsgi.Application):
                                     tenant=tenant_ref,
                                     metadata=metadata_ref))
 
-        # TODO(termie): optimize this call at some point and put it into the
-        #               the return for metadata
-        # fill out the roles in the metadata
-        roles_ref = []
-        for role_id in metadata_ref.get('roles', []):
-            roles_ref.append(self.identity_api.get_role(context, role_id))
-
-        # TODO(termie): make this a util function or something
         # TODO(termie): i don't think the ec2 middleware currently expects a
         #               full return, but it contains a note saying that it
         #               would be better to expect a full return
-        token_controller = service.TokenController()
-        return token_controller._format_authenticate(
+        return token.controllers.Auth.format_authenticate(
             token_ref, roles_ref, catalog_ref)
 
     def create_credential(self, context, user_id, tenant_id):
@@ -291,11 +291,11 @@ class Ec2Controller(wsgi.Application):
             token_ref = self.token_api.get_token(
                 context=context,
                 token_id=context['token_id'])
-        except exception.TokenNotFound:
-            raise exception.Unauthorized()
-        token_user_id = token_ref['user'].get('id')
-        if not token_user_id == user_id:
-            raise exception.Forbidden()
+        except exception.TokenNotFound as e:
+            raise exception.Unauthorized(e)
+
+        if token_ref['user'].get('id') != user_id:
+            raise exception.Forbidden('Token belongs to another user')
 
     def _is_admin(self, context):
         """Wrap admin assertion error return statement.
@@ -321,7 +321,7 @@ class Ec2Controller(wsgi.Application):
         """
         cred_ref = self.ec2_api.get_credential(context, credential_id)
         if not user_id == cred_ref['user_id']:
-            raise exception.Forbidden()
+            raise exception.Forbidden('Credential belongs to another user')
 
     def _assert_valid_user_id(self, context, user_id):
         """Ensure a valid user id.
