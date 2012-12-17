@@ -36,20 +36,24 @@ class MappingTestCase(test_v3.RestfulTestCase):
             self.role_id,
             self.role.copy())
 
-        self.org_attribute_association_id = uuid.uuid4().hex
-        self.org_attribute_association = self.new_org_attribute_association_ref()
-        self.org_attribute_association['id'] = self.org_attribute_association_id
-        self.org_attribute_association['org_attribute_id'] = self.org_attribute_id
-        self.org_attribute_association['org_attribute_set_id'] = self.org_attribute_set_id
+        self.org_attribute_assoc_id = uuid.uuid4().hex
+        ref = self.new_org_attribute_association_ref()
+        self.org_attribute_association = ref
+        self.org_attribute_association['id'] = self.org_attribute_assoc_id
+        att_id = self.org_attribute_id
+        self.org_attribute_association['org_attribute_id'] = att_id
+        set_id = self.org_attribute_set_id
+        self.org_attribute_association['org_attribute_set_id'] = set_id
         self.mapping_api.create_org_attribute_association(
-            self.org_attribute_association_id,
+            self.org_attribute_assoc_id,
             self.org_attribute_association.copy())
 
         self.os_attribute_association_id = uuid.uuid4().hex
         self.os_attribute_association = self.new_os_attribute_association_ref()
         self.os_attribute_association['id'] = self.os_attribute_association_id
         self.os_attribute_association['attribute_id'] = self.role_id
-        self.os_attribute_association['os_attribute_set_id'] = self.os_attribute_set_id
+        set_id = self.os_attribute_set_id
+        self.os_attribute_association['os_attribute_set_id'] = set_id
         self.os_attribute_association['type'] = 'role'
         self.mapping_api.create_os_attribute_association(
             self.os_attribute_association_id,
@@ -58,14 +62,15 @@ class MappingTestCase(test_v3.RestfulTestCase):
         self.attribute_mapping_id = uuid.uuid4().hex
         self.attribute_mapping = self.new_attribute_mapping_ref()
         self.attribute_mapping['id'] = self.attribute_mapping_id
-        self.attribute_mapping['org_attribute_set_id'] = self.org_attribute_set_id
-        self.attribute_mapping['os_attribute_set_id'] = self.os_attribute_set_id
+        os_set = self.os_attribute_set_id
+        org_set = self.org_attribute_set_id
+        self.attribute_mapping['org_attribute_set_id'] = org_set
+        self.attribute_mapping['os_attribute_set_id'] = os_set
         self.mapping_api.create_mapping(
             self.attribute_mapping_id,
             self.attribute_mapping.copy())
 
-
-    # Org Attribute validation
+    # Org Attribute set validation
 
     def assertValidOrgAttributeSetListResponse(self, resp, ref):
         return self.assertValidListResponse(
@@ -157,9 +162,6 @@ class MappingTestCase(test_v3.RestfulTestCase):
         self.delete('/os_attribute_sets/%(set_id)s' % {
             'set_id': self.os_attribute_set_id})
 
-
-    
-
     # Org Attribute validation
 
     def assertValidOrgAttributeListResponse(self, resp, ref):
@@ -179,7 +181,7 @@ class MappingTestCase(test_v3.RestfulTestCase):
     def assertValidOrgAttribute(self, entity, ref=None):
         self.assertIsNotNone(entity.get('name'))
         if ref:
-            self.assertEqual(ref['type'], entity['type'])
+            self.assertEqual(ref['name'], entity['name'])
         return entity
 
     def test_create_org_attribute(self):
@@ -223,9 +225,9 @@ class MappingTestCase(test_v3.RestfulTestCase):
             ref)
 
     def assertValidOrgAttributeAssociation(self, entity, ref=None):
-        self.assertIsNotNone(entity.get('id'))
+        self.assertIsNotNone(entity.get('name'))
         if ref:
-            self.assertEqual(ref['org_attribute_id'], entity['org_attribute_id'])
+            self.assertEqual(ref['name'], entity['name'])
         return entity
 
     def test_create_org_attribute_association(self):
@@ -239,19 +241,20 @@ class MappingTestCase(test_v3.RestfulTestCase):
     def test_list_org_attribute_associations(self):
         """GET /org_attribute_associations"""
         r = self.get('/org_attribute_associations')
-        self.assertValidOrgAttributeAssociationListResponse(r, self.org_attribute_association)
+        oaa = self.org_attribute_association
+        self.assertValidOrgAttributeAssociationListResponse(r, oaa)
 
     def test_get_org_attribute_association(self):
         """GET /org_attribute_associations/{org_attribute_association_id}"""
         r = self.get('/org_attribute_associations/%(set_id)s' % {
-            'set_id': self.org_attribute_association_id})
-        self.assertValidOrgAttributeAssociationResponse(r, self.org_attribute_association)
+            'set_id': self.org_attribute_assoc_id})
+        oaa = self.org_attribute_association
+        self.assertValidOrgAttributeAssociationResponse(r, oaa)
 
     def test_delete_org_attribute_association(self):
         """DELETE /org_attribute_associations/{org_attribute_association_id}"""
         self.delete('/org_attribute_associations/%(set_id)s' % {
-            'set_id': self.org_attribute_association_id})
-
+            'set_id': self.org_attribute_assoc_id})
 
     # os attribute association validation
 
@@ -270,9 +273,9 @@ class MappingTestCase(test_v3.RestfulTestCase):
             ref)
 
     def assertValidOsAttributeAssociation(self, entity, ref=None):
-        self.assertIsNotNone(entity.get('id'))
+        self.assertIsNotNone(entity.get('name'))
         if ref:
-            self.assertEqual(ref['type'], entity['type'])
+            self.assertEqual(ref['name'], entity['name'])
         return entity
 
     def test_create_os_attribute_association(self):
@@ -286,13 +289,15 @@ class MappingTestCase(test_v3.RestfulTestCase):
     def test_list_os_attribute_associations(self):
         """GET /os_attribute_associations"""
         r = self.get('/os_attribute_associations')
-        self.assertValidOsAttributeAssociationListResponse(r, self.os_attribute_association)
+        oaa = self.os_attribute_association
+        self.assertValidOsAttributeAssociationListResponse(r, oaa)
 
     def test_get_os_attribute_association(self):
         """GET /os_attribute_associations/{os_attribute_association_id}"""
         r = self.get('/os_attribute_associations/%(set_id)s' % {
             'set_id': self.os_attribute_association_id})
-        self.assertValidOsAttributeAssociationResponse(r, self.os_attribute_association)
+        oaa = self.os_attribute_association
+        self.assertValidOsAttributeAssociationResponse(r, oaa)
 
     def test_delete_os_attribute_association(self):
         """DELETE /os_attribute_associations/{os_attribute_association_id}"""
@@ -316,31 +321,31 @@ class MappingTestCase(test_v3.RestfulTestCase):
             ref)
 
     def assertValidAttributeMapping(self, entity, ref=None):
-        self.assertIsNotNone(entity.get('id'))
+        self.assertIsNotNone(entity.get('name'))
         if ref:
-            self.assertEqual(ref['org_attribute_set_id'], entity['org_attribute_set_id'])
+            self.assertEqual(ref['name'], entity['name'])
         return entity
 
     def test_create_attribute_mapping(self):
-        """POST /attribute_mappings"""
+        """POST /mappings"""
         ref = self.new_attribute_mapping_ref()
         r = self.post(
-            '/attribute_mappings',
+            '/mappings',
             body={'attribute_mapping': ref})
         return self.assertValidAttributeMappingResponse(r, ref)
 
     def test_list_attribute_mappings(self):
-        """GET /attribute_mappings"""
-        r = self.get('/attribute_mappings')
+        """GET /mappings"""
+        r = self.get('/mappings')
         self.assertValidAttributeMappingListResponse(r, self.attribute_mapping)
 
     def test_get_attribute_mapping(self):
-        """GET /attribute_mappings/{attribute_mapping_id}"""
-        r = self.get('/attribute_mappings/%(set_id)s' % {
-            'set_id': self.attribute_mapping_id})
+        """GET /mappings/{attribute_mapping_id}"""
+        r = self.get('/mappings/%(mapping_id)s' % {
+            'mapping_id': self.attribute_mapping_id})
         self.assertValidAttributeMappingResponse(r, self.attribute_mapping)
 
     def test_delete_attribute_mapping(self):
-        """DELETE /attribute_mappings/{attribute_mapping_id}"""
-        self.delete('/attribute_mappings/%(set_id)s' % {
-            'set_id': self.attribute_mapping_id})
+        """DELETE /mappings/{attribute_mapping_id}"""
+        self.delete('/mappings/%(mapping_id)s' % {
+            'mapping_id': self.attribute_mapping_id})

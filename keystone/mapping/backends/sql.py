@@ -11,7 +11,8 @@ class Mapping(sql.Base, Driver):
 
     # Organisational
     #Sets
-    def create_org_attribute_set(self, org_attribute_set_id, org_attribute_set_ref):
+    def create_org_attribute_set(self, org_attribute_set_id,
+                                 org_attribute_set_ref):
         session = self.get_session()
         with session.begin():
             orgset = OrgAttributeSet.from_dict(org_attribute_set_ref)
@@ -33,7 +34,8 @@ class Mapping(sql.Base, Driver):
             return session.query(OrgAttributeSet).filter_by(
                 id=set_id).one()
         except sql.NotFound:
-            raise exception.OrgAttributeSetNotFound(org_attribute_set_id=set_id)
+            raise exception.OrgAttributeSetNotFound(
+                org_attribute_set_id=set_id)
 
     def list_org_attribute_sets(self):
         session = self.get_session()
@@ -60,7 +62,7 @@ class Mapping(sql.Base, Driver):
 
     def get_org_attribute(self, attribute_id):
         session = self.get_session()
-        return self._get_org_att(session, attribute_id).to_dict()
+        return self._get_org_attribute(session, attribute_id).to_dict()
 
     def _get_org_attribute(self, session, attribute_id):
         try:
@@ -77,7 +79,7 @@ class Mapping(sql.Base, Driver):
     def delete_org_attribute(self, attribute_id):
         session = self.get_session()
         with session.begin():
-            ref = self._get_org_att(session, attribute_id)
+            ref = self._get_org_attribute(session, attribute_id)
             session.query(OrgAttributeAssociation).filter_by(
                 org_attribute_id=attribute_id).delete()
             session.delete(ref)
@@ -127,7 +129,7 @@ class Mapping(sql.Base, Driver):
 
     def get_os_attribute_set(self, set_id):
         session = self.get_session()
-        ref = self._get_os_set(session, set_id).to_dict()
+        ref = self._get_os_attribute_set(session, set_id).to_dict()
         links = session.query(OsAttributeAssociation).filter_by(
             os_attribute_set_id=set_id).all()
         ref['attributes'] = [(self._get_os_attribute(
@@ -151,7 +153,7 @@ class Mapping(sql.Base, Driver):
     def delete_os_attribute_set(self, set_id):
         session = self.get_session()
         with session.begin():
-            ref = self._get_os_set(session, set_id)
+            ref = self._get_os_attribute_set(session, set_id)
             session.query(OsAttributeAssociation).filter_by(
                 os_attribute_set_id=set_id).delete()
             session.delete(ref)
@@ -254,7 +256,7 @@ class Mapping(sql.Base, Driver):
     def list_mappings(self):
         session = self.get_session()
         mappings = session.query(AttributeMapping).all()
-        return [{"attribute_mappings": self.get_mapping(m.id)} for m in list(mappings)]
+        return [self.get_mapping(m.id) for m in list(mappings)]
 
 
 class OrgAttributeSet(sql.ModelBase, sql.DictBase):
@@ -316,13 +318,14 @@ class OrgAttributeAssociation(sql.ModelBase, sql.DictBase):
     def from_dict(cls, org_assoc_dict):
         extra = {}
         for k, v in org_assoc_dict.copy().iteritems():
-            if k not in ['id', 'org_attribute_set_id', 'org_attribute_id', 'extra']:
+            if k not in ['id', 'org_attribute_set_id',
+                         'org_attribute_id', 'extra']:
                 extra[k] = org_assoc_dict.pop(k)
         org_assoc_dict["extra"] = extra
         return cls(**org_assoc_dict)
 
     def to_dict(self):
-        extra_copy = {}
+        extra_copy = self.extra.copy()
         extra_copy['id'] = self.id
         extra_copy['org_attribute_id'] = self.org_attribute_id
         extra_copy['org_attribute_set_id'] = self.org_attribute_set_id
@@ -363,7 +366,8 @@ class OsAttributeAssociation(sql.ModelBase, sql.DictBase):
     def from_dict(cls, org_assoc_dict):
         extra = {}
         for k, v in org_assoc_dict.copy().iteritems():
-            if k not in ['id', 'os_attribute_set_id', 'attribute_id', 'type', 'extra']:
+            if k not in ['id', 'os_attribute_set_id',
+                         'attribute_id', 'type', 'extra']:
                 extra[k] = org_assoc_dict.pop(k)
         org_assoc_dict["extra"] = extra
 
@@ -391,7 +395,8 @@ class AttributeMapping(sql.ModelBase, sql.DictBase):
     def from_dict(cls, mapping_dict):
         extra = {}
         for k, v in mapping_dict.copy().iteritems():
-            if k not in ['id', 'os_attribute_set_id', 'org_attribute_set_id', 'extra']:
+            if k not in ['id', 'os_attribute_set_id',
+                         'org_attribute_set_id', 'extra']:
                 extra[k] = mapping_dict.pop(k)
         mapping_dict["extra"] = extra
         return cls(**mapping_dict)
