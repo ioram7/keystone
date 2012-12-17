@@ -27,18 +27,9 @@ from keystone.common import utils
 from keystone import config
 from keystone import exception
 from keystone import identity
-from keystone.identity import filter_user
 
 
 CONF = config.CONF
-
-
-def _ensure_hashed_password(user_ref):
-    pw = user_ref.get('password', None)
-    if pw is not None:
-        pw = utils.ldap_hash_password(pw)
-        user_ref['password'] = pw
-    return user_ref
 
 
 class Identity(identity.Driver):
@@ -103,7 +94,7 @@ class Identity(identity.Driver):
             except exception.MetadataNotFound:
                 metadata_ref = {}
 
-        return (filter_user(user_ref), tenant_ref, metadata_ref)
+        return (identity.filter_user(user_ref), tenant_ref, metadata_ref)
 
     def get_tenant(self, tenant_id):
         try:
@@ -127,14 +118,14 @@ class Identity(identity.Driver):
             raise exception.UserNotFound(user_id=user_id)
 
     def get_user(self, user_id):
-        return filter_user(self._get_user(user_id))
+        return identity.filter_user(self._get_user(user_id))
 
     def list_users(self):
         return self.user.get_all()
 
     def get_user_by_name(self, user_name):
         try:
-            return filter_user(self.user.get_by_name(user_name))
+            return identity.filter_user(self.user.get_by_name(user_name))
         except exception.NotFound:
             raise exception.UserNotFound(user_id=user_name)
 
@@ -197,7 +188,7 @@ class Identity(identity.Driver):
     # CRUD
     def create_user(self, user_id, user):
         user['name'] = clean.user_name(user['name'])
-        return filter_user(self.user.create(user))
+        return identity.filter_user(self.user.create(user))
 
     def update_user(self, user_id, user):
         if 'name' in user:
@@ -326,17 +317,13 @@ class UserApi(common_ldap.BaseLdap, ApiShimMixin):
     DEFAULT_STRUCTURAL_CLASSES = ['person']
     DEFAULT_ID_ATTR = 'cn'
     DEFAULT_OBJECTCLASS = 'inetOrgPerson'
-    DEFAULT_ATTRIBUTE_IGNORE = ['tenant_id', 'enabled', 'tenants']
+    DEFAULT_ATTRIBUTE_IGNORE = ['tenant_id', 'tenants']
     options_name = 'user'
     attribute_mapping = {'password': 'userPassword',
                          'email': 'mail',
-                         'name': 'sn'}
+                         'name': 'sn',
+                         'enabled': 'enabled'}
 
-    # NOTE(ayoung): The RFC based schemas don't have a way to indicate
-    # 'enabled' the closest is the nsAccount lock, which is on defined to
-    # be part of any objectclass.
-    # in the future, we need to provide a way for the end user to
-    # indicate the field to use and what it indicates
     model = models.User
 
     def __init__(self, conf):
@@ -344,9 +331,29 @@ class UserApi(common_ldap.BaseLdap, ApiShimMixin):
         self.attribute_mapping['name'] = conf.ldap.user_name_attribute
         self.attribute_mapping['email'] = conf.ldap.user_mail_attribute
         self.attribute_mapping['password'] = conf.ldap.user_pass_attribute
+        self.attribute_mapping['enabled'] = conf.ldap.user_enabled_attribute
+        self.enabled_mask = conf.ldap.user_enabled_mask
+        self.enabled_default = conf.ldap.user_enabled_default
         self.attribute_ignore = (getattr(conf.ldap, 'user_attribute_ignore')
                                  or self.DEFAULT_ATTRIBUTE_IGNORE)
         self.api = ApiShim(conf)
+
+    def _ldap_res_to_model(self, res):
+        obj = super(UserApi, self)._ldap_res_to_model(res)
+        if self.enabled_mask != 0:
+            obj['enabled_nomask'] = obj['enabled']
+            obj['enabled'] = ((obj['enabled'] & self.enabled_mask) !=
+                              self.enabled_mask)
+        return obj
+
+    def mask_enabled_attribute(self, values):
+        value = values['enabled']
+        values.setdefault('enabled_nomask', self.enabled_default)
+        if value != ((values['enabled_nomask'] & self.enabled_mask) !=
+                     self.enabled_mask):
+            values['enabled_nomask'] ^= self.enabled_mask
+        values['enabled'] = values['enabled_nomask']
+        del values['enabled_nomask']
 
     def get(self, id, filter=None):
         """Replaces exception.NotFound with exception.UserNotFound."""
@@ -366,7 +373,9 @@ class UserApi(common_ldap.BaseLdap, ApiShimMixin):
 
     def create(self, values):
         self.affirm_unique(values)
-        _ensure_hashed_password(values)
+        values = utils.hash_ldap_user_password(values)
+        if self.enabled_mask:
+            self.mask_enabled_attribute(values)
         values = super(UserApi, self).create(values)
         tenant_id = values.get('tenant_id')
         if tenant_id is not None:
@@ -393,7 +402,10 @@ class UserApi(common_ldap.BaseLdap, ApiShimMixin):
                 if new_tenant:
                     self.tenant_api.add_user(new_tenant, id)
 
-        _ensure_hashed_password(values)
+        values = utils.hash_ldap_user_password(values)
+        if self.enabled_mask:
+            values['enabled_nomask'] = old_obj['enabled_nomask']
+            self.mask_enabled_attribute(values)
         super(UserApi, self).update(id, values, old_obj)
 
     def delete(self, id):
@@ -465,9 +477,12 @@ class TenantApi(common_ldap.BaseLdap, ApiShimMixin):
     DEFAULT_OBJECTCLASS = 'groupOfNames'
     DEFAULT_ID_ATTR = 'cn'
     DEFAULT_MEMBER_ATTRIBUTE = 'member'
-    DEFAULT_ATTRIBUTE_IGNORE = ['enabled']
+    DEFAULT_ATTRIBUTE_IGNORE = []
     options_name = 'tenant'
-    attribute_mapping = {'name': 'ou', 'description': 'desc', 'tenantId': 'cn'}
+    attribute_mapping = {'name': 'ou',
+                         'description': 'desc',
+                         'tenantId': 'cn',
+                         'enabled': 'enabled'}
     model = models.Tenant
 
     def __init__(self, conf):
@@ -475,6 +490,7 @@ class TenantApi(common_ldap.BaseLdap, ApiShimMixin):
         self.api = ApiShim(conf)
         self.attribute_mapping['name'] = conf.ldap.tenant_name_attribute
         self.attribute_mapping['description'] = conf.ldap.tenant_desc_attribute
+        self.attribute_mapping['enabled'] = conf.ldap.tenant_enabled_attribute
         self.member_attribute = (getattr(conf.ldap, 'tenant_member_attribute')
                                  or self.DEFAULT_MEMBER_ATTRIBUTE)
         self.attribute_ignore = (getattr(conf.ldap, 'tenant_attribute_ignore')

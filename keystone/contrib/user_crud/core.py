@@ -20,9 +20,8 @@ import uuid
 from keystone import exception
 from keystone.common import logging
 from keystone.common import wsgi
-from keystone.identity import Manager as IdentityManager
-from keystone.identity import UserController as UserManager
-from keystone.token import Manager as TokenManager
+from keystone import identity
+from keystone import token
 
 
 LOG = logging.getLogger(__name__)
@@ -30,9 +29,9 @@ LOG = logging.getLogger(__name__)
 
 class UserController(wsgi.Application):
     def __init__(self):
-        self.identity_api = IdentityManager()
-        self.token_api = TokenManager()
-        self.user_controller = UserManager()
+        self.identity_api = identity.Manager()
+        self.token_api = token.Manager()
+        self.user_controller = identity.controllers.User()
 
     def set_user_password(self, context, user_id, user):
         token_id = context.get('token_id')
@@ -42,8 +41,11 @@ class UserController(wsgi.Application):
                                              token_id=token_id)
         user_id_from_token = token_ref['user']['id']
 
-        if user_id_from_token != user_id or original_password is None:
-            raise exception.Forbidden()
+        if user_id_from_token != user_id:
+            raise exception.Forbidden('Token belongs to another user')
+        if original_password is None:
+            raise exception.ValidationError(target='user',
+                                            attribute='original password')
 
         try:
             user_ref = self.identity_api.authenticate(
@@ -51,7 +53,8 @@ class UserController(wsgi.Application):
                 user_id=user_id_from_token,
                 password=original_password)[0]
             if not user_ref.get('enabled', True):
-                raise exception.Unauthorized()
+                # NOTE(dolph): why can't you set a disabled user's password?
+                raise exception.Unauthorized('User is disabled')
         except AssertionError:
             raise exception.Unauthorized()
 
