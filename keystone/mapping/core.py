@@ -66,13 +66,13 @@ class Manager(manager.Manager):
             context, attribute_ref)
 
     def get_org_attribute(self, context, attribute_id):
-        return self.driver.get_org_att(attribute_id)
+        return self.driver.get_org_attribute(attribute_id)
 
     def list_org_attributes(self):
-        return self.driver.list_org_atts()
+        return self.driver.list_org_attributes()
 
     def delete_org_attribute(self, attribute_id):
-        self.driver.delete_org_att(attribute_id)
+        self.driver.delete_org_attribute(attribute_id)
 
     # Associations
 
