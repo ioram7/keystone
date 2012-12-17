@@ -34,6 +34,7 @@ class RestfulTestCase(test_content_types.RestfulTestCase):
             'name': uuid.uuid4().hex,
             'description': uuid.uuid4().hex,
             'enabled': True}
+
     def new_org_attribute_set_ref(self):
         ref = self.new_ref()
         return ref

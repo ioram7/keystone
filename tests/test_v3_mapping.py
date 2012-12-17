@@ -1,20 +1,19 @@
 import uuid
 
 import test_v3
-BASE_URL = 'http://127.0.0.1:35357/v2.0'
+
+
 class MappingTestCase(test_v3.RestfulTestCase):
     """Test mapping CRUD"""
 
     def setUp(self):
         super(MappingTestCase, self).setUp()
-        BASE_URL = 'http://127.0.0.1:35357/v2.0'
         self.org_attribute_set_id = uuid.uuid4().hex
         self.org_attribute_set = self.new_service_ref()
         self.org_attribute_set['id'] = self.org_attribute_set_id
         self.mapping_api.create_org_attribute_set(
             self.org_attribute_set_id,
             self.org_attribute_set.copy())
-
 
     # service validation
 
@@ -38,27 +37,24 @@ class MappingTestCase(test_v3.RestfulTestCase):
             self.assertEqual(ref['type'], entity['type'])
         return entity
 
-
     def test_create_org_attribute_set(self):
-        """POST /mapping/orgattributeset"""
+        """POST /org_attribute_sets"""
         ref = self.new_org_attribute_set_ref()
         r = self.post(
-            '/mapping/orgattributeset',
-            body={'orgattributeset': ref})
+            '/org_attribute_sets',
+            body={'org_attribute_set': ref})
         return True
 
     def test_list_org_attribute_sets(self):
-        """GET /mapping/orgattributeset"""
-        r = self.get('/mapping/orgattributeset')
-        self.assertValidServiceListResponse(r, self.service)
+        """GET /org_attribute_sets"""
+        r = self.get('/org_attribute_sets')
 
     def test_get_org_attribute_set(self):
-        """GET /mapping/orgattributeset/{set_id}"""
-        r = self.get('/mapping/orgattributeset/%(set_id)s' % {
-            'set_id': self.org_attribute_set})
-        self.assertValidServiceResponse(r, self.org_attribute_set)
+        """GET /org_attribute_sets/{org_attribute_set_id}"""
+        r = self.get('/org_attribute_sets/%(set_id)s' % {
+            'set_id': self.org_attribute_set_id})
 
     def test_delete_org_attribute_set(self):
-        """DELETE /mapping/org_attribute_set/{set_id}"""
-        self.delete('/mapping/orgattributeset/%(set_id)s' % {
+        """DELETE /org_attribute_sets/{org_attribute_set_id}"""
+        self.delete('/org_attribute_sets/%(set_id)s' % {
             'set_id': self.org_attribute_set_id})

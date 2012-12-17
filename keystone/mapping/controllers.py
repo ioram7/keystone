@@ -75,26 +75,29 @@ class OrgMappingController(wsgi.Application):
         super(OrgMappingController)
 
     # Sets
-    def get_org_sets(self, context, set_id=None):
-        if set_id:
-            org_set = self.mapping_api.get_org_set(context, set_id)
-            return {'orgattributeset': org_set}
+
+    def list_org_attribute_sets(self, context):
         return {'orgattributesets': self.mapping_api.list_org_sets()}
 
-    def delete_org_set(self, context, set_id):
-        self.mapping_api.delete_org_set(set_id)
+    def get_org_attribute_set(self, context, org_attribute_set_id):
+        org_set = self.mapping_api.get_org_set(context, org_attribute_set_id)
+        return {'orgattributeset': org_set}
 
-    def create_org_set(self, context, org_attribute_set):
+    def delete_org_attribute_set(self, context, org_attribute_set_id):
+        self.mapping_api.delete_org_set(org_attribute_set_id)
+
+    def create_org_attribute_set(self, context, org_attribute_set):
         LOG.debug("Creating set: " + str(org_attribute_set))
         self.assert_admin(context)
         set_id = uuid.uuid4().hex
         set_ref = org_attribute_set.copy()
         set_ref['id'] = set_id
         new_set_ref = self.mapping_api.create_org_set(
-            context, set_id, set_ref)
+            context, set_ref)
         return {'orgattributeset': new_set_ref}
 
     # Attributes
+
     def get_org_atts(self, context, attribute_id=None):
         if attribute_id:
             att = self.mapping_api.get_org_att(context, attribute_id)
@@ -115,6 +118,7 @@ class OrgMappingController(wsgi.Application):
         return {'orgattributeset': new_attribute_ref}
 
     # Associations
+
     def get_org_assocs(self, context, assoc_id=None):
         if assoc_id:
             assoc = self.mapping_api.get_org_assoc(context, assoc_id)
@@ -142,6 +146,7 @@ class OsMappingController(wsgi.Application):
         super(OsMappingController)
 
     # Sets
+
     def get_os_sets(self, context, set_id=None):
         if set_id:
             os_set = self.mapping_api.get_os_set(context, set_id)
@@ -162,6 +167,7 @@ class OsMappingController(wsgi.Application):
         return {'osattributeset': new_set_ref}
 
     # Associations
+
     def get_os_assocs(self, context, assoc_id=None):
         if assoc_id:
             assoc = self.mapping_api.get_os_assoc(context, assoc_id)

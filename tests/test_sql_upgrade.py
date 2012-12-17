@@ -138,8 +138,8 @@ class SqlUpgradeTests(test.TestCase):
                                 ["id", "attribute_id",
                                  "os_attribute_set_id", "type"])
         self.assertTableColumns("attribute_mapping",
-                                ["id", "os_attribute_set_id",
-                                 "org_attribute_set_id"])
+                                ["id", "org_attribute_set_id",
+                                 "os_attribute_set_id"])
 
     def test_downgrade_10_to_9(self):
         self.assertEqual(self.schema.version, 0)

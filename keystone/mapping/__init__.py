@@ -15,3 +15,4 @@
 # under the License.
 
 from keystone.mapping.core import *
+from keystone.mapping import controllers

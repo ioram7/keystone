@@ -14,6 +14,7 @@ class Manager(manager.Manager):
     def __init__(self):
         super(Manager, self).__init__(CONF.mapping.driver)
     # Sets
+
     def create_os_set(self, context, set_id, set_ref):
         return self.driver.create_os_attribute_set(context, set_id, set_ref)
 
@@ -27,6 +28,7 @@ class Manager(manager.Manager):
         self.driver.delete_os_set(set_id)
 
     # Associations
+
     def create_os_assoc(self, context, assoc_id, assoc_ref):
         return self.driver.create_os_assoc(context, assoc_id, assoc_ref)
 
@@ -43,9 +45,10 @@ class Manager(manager.Manager):
         super(Manager, self).__init__(CONF.mapping.driver)
 
     # Sets
-    def create_org_set(self, context, set_id, set_ref):
+
+    def create_org_set(self, context, set_ref):
         return self.driver.create_org_attribute_set(
-            context, set_id, set_ref)
+            context, set_ref)
 
     def get_org_set(self, context, set_id):
         return self.driver.get_org_set(set_id)
@@ -57,6 +60,7 @@ class Manager(manager.Manager):
         self.driver.delete_org_set(set_id)
 
     # Attributes
+
     def create_org_att(self, context, attribute_id, attribute_ref):
         return self.driver.create_org_attribute(
             context, attribute_id, attribute_ref)
@@ -71,6 +75,7 @@ class Manager(manager.Manager):
         self.driver.delete_org_att(attribute_id)
 
     # Associations
+
     def create_org_assoc(self, context, assoc_id, assoc_ref):
         return self.driver.create_org_assoc(
             context, assoc_id, assoc_ref)
@@ -85,6 +90,7 @@ class Manager(manager.Manager):
         self.driver.delete_org_assoc(assoc_id)
 
     # Mappings
+
     def create_mapping(self, context, mapping_id, mapping_ref):
         return self.driver.create_mapping(context, mapping_id, mapping_ref)
 
@@ -108,6 +114,7 @@ class Driver(object):
 
     # Organisational
     #Sets
+
     def create_org_attribute_set(self, org_set_id, org_set_ref):
         raise exception.NotImplemented()
 
@@ -124,6 +131,7 @@ class Driver(object):
         raise exception.NotImplemented()
 
     # Attributes
+
     def create_org_attribute(self, context, org_att_id, org_att_ref):
         raise exception.NotImplemented()
 
@@ -140,6 +148,7 @@ class Driver(object):
         raise exception.NotImplemented()
 
     # Associations
+
     def create_org_assoc(self, context, org_assoc_id, org_assoc_ref):
         raise exception.NotImplemented()
 
@@ -157,6 +166,7 @@ class Driver(object):
 
     # Openstack
     #Sets
+
     def create_os_attribute_set(self, context, os_set_id, os_set_ref):
         raise exception.NotImplemented()
 
@@ -176,6 +186,7 @@ class Driver(object):
         raise exception.NotImplemented()
 
     # Associations
+
     def create_os_assoc(self, context, os_assoc_id, os_assoc_ref):
         raise exception.NotImplemented()
 
@@ -195,6 +206,7 @@ class Driver(object):
         raise exception.NotImplemented()
 
     # Attribute Mapping
+
     def create_mapping(self, context, mapping_id, mapping_ref):
         raise exception.NotImplemented()
 
@@ -209,5 +221,3 @@ class Driver(object):
 
     def list_mappings(self):
         raise exception.NotImplemented()
-
-

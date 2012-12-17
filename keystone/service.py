@@ -23,6 +23,7 @@ from keystone import exception
 from keystone import identity
 from keystone import policy
 from keystone import token
+from keystone import mapping
 
 
 LOG = logging.getLogger(__name__)
@@ -70,6 +71,14 @@ class V3Router(wsgi.ComposingRouter):
             identity_api=identity.Manager(),
             policy_api=policy.Manager(),
             token_api=token.Manager())
+
+        # Mapping
+
+        self.crud_routes(
+            mapper,
+            mapping.controllers.OrgMappingController(),
+            'org_attribute_sets',
+            'org_attribute_set')
 
         # Catalog
 
