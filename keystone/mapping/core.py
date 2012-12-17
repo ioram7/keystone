@@ -46,18 +46,18 @@ class Manager(manager.Manager):
 
     # Sets
 
-    def create_org_set(self, context, set_ref):
+    def create_org_attribute_set(self, context, set_ref):
         return self.driver.create_org_attribute_set(
             context, set_ref)
 
-    def get_org_set(self, context, set_id):
-        return self.driver.get_org_set(set_id)
+    def get_org_attribute_set(self, context, set_id):
+        return self.driver.get_org_attribute_set(set_id)
 
-    def list_org_sets(self):
-        return self.driver.list_org_sets()
+    def list_org_attribute_sets(self):
+        return self.driver.list_org_attribute_sets()
 
-    def delete_org_set(self, set_id):
-        self.driver.delete_org_set(set_id)
+    def delete_org_attribute_set(self, set_id):
+        self.driver.delete_org_attribute_set(set_id)
 
     # Attributes
 
@@ -77,17 +77,17 @@ class Manager(manager.Manager):
     # Associations
 
     def create_org_attribute_association(self, context, assoc_ref):
-        return self.driver.create_org_assoc(
+        return self.driver.create_org_attribute_association(
             context, assoc_ref)
 
     def get_org_attribute_association(self, context, assoc_id):
-        return self.driver.get_org_assoc(assoc_id)
+        return self.driver.get_org_attribute_association(assoc_id)
 
     def list_org_attribute_associations(self):
-        return self.driver.list_org_assocs()
+        return self.driver.list_org_attribute_associations()
 
     def delete_org_attribute_association(self, assoc_id):
-        self.driver.delete_org_assoc(assoc_id)
+        self.driver.delete_org_attribute_association(assoc_id)
 
     # Mappings
 
@@ -115,19 +115,19 @@ class Driver(object):
     # Organisational
     #Sets
 
-    def create_org_attribute_set(self, org_set_id, org_set_ref):
+    def create_org_attribute_set(self, org_attribute_set_id, org_attribute_set_ref):
         raise exception.NotImplemented()
 
-    def get_org_set(self, set_id):
+    def get_org_attribute_set(self, set_id):
         raise exception.NotImplemented()
 
-    def _get_org_set(self, session, set_id):
+    def _get_org_attribute_set(self, session, set_id):
         raise exception.NotImplemented()
 
-    def list_org_sets(self):
+    def list_org_attribute_sets(self):
         raise exception.NotImplemented()
 
-    def delete_org_set(self, set_id):
+    def delete_org_attribute_set(self, set_id):
         raise exception.NotImplemented()
 
     # Attributes
@@ -135,33 +135,34 @@ class Driver(object):
     def create_org_attribute(self, context, org_att_id, org_att_ref):
         raise exception.NotImplemented()
 
-    def get_org_att(self, attribute_id):
+    def get_org_attribute(self, attribute_id):
         raise exception.NotImplemented()
 
-    def _get_org_att(self, session, attribute_id):
+    def _get_org_attribute(self, session, attribute_id):
         raise exception.NotImplemented()
 
-    def list_org_atts(self):
+    def list_org_attributes(self):
         raise exception.NotImplemented()
 
-    def delete_org_att(self, attribute_id):
+    def delete_org_attribute(self, attribute_id):
         raise exception.NotImplemented()
 
     # Associations
 
-    def create_org_assoc(self, context, org_assoc_id, org_assoc_ref):
+    def create_org_attribute_association(
+        self, context, org_attribute_association_id, org_attribute_association_ref):
         raise exception.NotImplemented()
 
-    def get_org_assoc(self, assoc_id):
+    def get_org_attribute_association(self, org_attribute_association_id):
         raise exception.NotImplemented()
 
-    def _get_org_assoc(self, session, assoc_id):
+    def _get_org_attribute_association(self, session, org_attribute_association_id):
         raise exception.NotImplemented()
 
-    def list_org_assocs(self):
+    def list_org_attribute_associations(self):
         raise exception.NotImplemented()
 
-    def delete_org_assoc(self, assoc_id):
+    def delete_org_attribute_association(self, org_attribute_association_id):
         raise exception.NotImplemented()
 
     # Openstack

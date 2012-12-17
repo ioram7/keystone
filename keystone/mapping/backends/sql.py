@@ -11,39 +11,39 @@ class Mapping(sql.Base, Driver):
 
     # Organisational
     #Sets
-    def create_org_attribute_set(self, org_set_id, org_set_ref):
+    def create_org_attribute_set(self, org_attribute_set_id, org_attribute_set_ref):
         session = self.get_session()
         with session.begin():
-            orgset = OrgAttributeSet.from_dict(org_set_ref)
+            orgset = OrgAttributeSet.from_dict(org_attribute_set_ref)
             session.add(orgset)
             session.flush()
         return orgset.to_dict()
 
-    def get_org_set(self, set_id):
+    def get_org_attribute_set(self, set_id):
         session = self.get_session()
-        ref = self._get_org_set(session, set_id).to_dict()
+        ref = self._get_org_attribute_set(session, set_id).to_dict()
         links = session.query(OrgAttributeAssociation).filter_by(
             org_attribute_set_id=set_id).all()
-        ref['attributes'] = [(self.get_org_att(
+        ref['attributes'] = [(self.get_org_attribute(
             s.org_attribute_id)) for s in list(links)]
         return ref
 
-    def _get_org_set(self, session, set_id):
+    def _get_org_attribute_set(self, session, set_id):
         try:
             return session.query(OrgAttributeSet).filter_by(
                 id=set_id).one()
         except sql.NotFound:
-            raise exception.ServiceNotFound(set_id=set_id)
+            raise exception.OrgAttributeSetNotFound(org_attribute_set_id=set_id)
 
-    def list_org_sets(self):
+    def list_org_attribute_sets(self):
         session = self.get_session()
         sets = session.query(OrgAttributeSet).all()
         return [s.to_dict() for s in list(sets)]
 
-    def delete_org_set(self, set_id):
+    def delete_org_attribute_set(self, set_id):
         session = self.get_session()
         with session.begin():
-            ref = self._get_org_set(session, set_id)
+            ref = self._get_org_attribute_set(session, set_id)
             session.query(OrgAttributeAssociation).filter_by(
                 org_attribute_set_id=set_id).delete()
             session.delete(ref)
@@ -67,7 +67,7 @@ class Mapping(sql.Base, Driver):
             return session.query(OrgAttribute).filter_by(
                 id=attribute_id).one()
         except sql.NotFound:
-            raise exception.ServiceNotFound(id=attribute_id)
+            raise exception.OrgAttributeNotFound(id=attribute_id)
 
     def list_org_attributes(self):
         session = self.get_session()
@@ -94,14 +94,14 @@ class Mapping(sql.Base, Driver):
 
     def get_org_attribute_association(self, assoc_id):
         session = self.get_session()
-        return self._get_org_assoc(session, assoc_id).to_dict()
+        return self._get_org_attribute_association(session, assoc_id).to_dict()
 
     def _get_org_attribute_association(self, session, assoc_id):
         try:
             return session.query(OrgAttributeAssociation).filter_by(
                 id=assoc_id).one()
         except sql.NotFound:
-            raise exception.ServiceNotFound(id=assoc_id)
+            raise exception.OrgAttributeAssociationNotFound(id=assoc_id)
 
     def list_org_attribute_associations(self):
         session = self.get_session()
@@ -111,7 +111,7 @@ class Mapping(sql.Base, Driver):
     def delete_org_attribute_association(self, assoc_id):
         session = self.get_session()
         with session.begin():
-            ref = self._get_org_assoc(session, assoc_id)
+            ref = self._get_org_attribute_association(session, assoc_id)
             session.delete(ref)
             session.flush()
 
@@ -130,22 +130,22 @@ class Mapping(sql.Base, Driver):
         ref = self._get_os_set(session, set_id).to_dict()
         links = session.query(OsAttributeAssociation).filter_by(
             os_attribute_set_id=set_id).all()
-        ref['attributes'] = [(self._get_os_att(
+        ref['attributes'] = [(self._get_os_attribute(
             session, s.attribute_id, s.type)) for s in list(links)]
         return ref
 
-    def _get_os_set(self, session, set_id):
+    def _get_os_attribute_set(self, session, set_id):
         try:
             return session.query(OsAttributeSet).filter_by(
                 id=set_id).one()
         except sql.NotFound:
-            raise exception.ServiceNotFound(set_id=set_id)
+            raise exception.OsAttributeSetNotFound(set_id=set_id)
 
     def list_os_attribute_sets(self):
         session = self.get_session()
         sets = session.query(OsAttributeSet).all()
         for s in list(sets):
-            s["attributes"] = self._get_os_set_details(session, s.id)
+            s["attributes"] = self._get_os_attribute_set_details(session, s.id)
         return [s.to_dict() for s in list(sets)]
 
     def delete_os_attribute_set(self, set_id):
@@ -157,10 +157,10 @@ class Mapping(sql.Base, Driver):
             session.delete(ref)
             session.flush()
 
-    def _get_os_set_details(self, session, set_id):
+    def _get_os_attribute_set_details(self, session, set_id):
         links = session.query(OsAttributeAssociation).filter_by(
             os_attribute_set_id=set_id).all()
-        return [(self._get_os_att(
+        return [(self._get_os_attribute(
             session, s.attribute_id, s.type)) for s in list(links)]
 
     # Associations
@@ -174,14 +174,14 @@ class Mapping(sql.Base, Driver):
 
     def get_os_attribute_association(self, assoc_id):
         session = self.get_session()
-        return self._get_os_assoc(session, assoc_id).to_dict()
+        return self._get_os_attribute_association(session, assoc_id).to_dict()
 
     def _get_os_attribute_association(self, session, assoc_id):
         try:
             return session.query(OsAttributeAssociation).filter_by(
                 id=assoc_id).one()
         except sql.NotFound:
-            raise exception.ServiceNotFound(id=assoc_id)
+            raise exception.OsAttributeAssociationNotFound(id=assoc_id)
 
     def list_os_attribute_associations(self):
         session = self.get_session()
@@ -191,14 +191,14 @@ class Mapping(sql.Base, Driver):
     def delete_os_attribute_association(self, assoc_id):
         session = self.get_session()
         with session.begin():
-            ref = self._get_os_assoc(session, assoc_id)
+            ref = self._get_os_attribute_association(session, assoc_id)
             session.delete(ref)
             session.flush()
 
     # Possibly the wrong way to do this, and likely not the prettiest -
     # suggestions welcome. Kristy
     # Get an internal (OS attribute)
-    def _get_os_att(self, session, att_id, type):
+    def _get_os_attribute(self, session, att_id, type):
         if type == "tenant":
             try:
                 ref = session.query(identity.Tenant).filter_by(
@@ -233,8 +233,8 @@ class Mapping(sql.Base, Driver):
         ref = ref.to_dict()
         org_id = ref['org_attribute_set_id']
         os_id = ref['os_attribute_set_id']
-        ref['org_attribute_set'] = self.get_org_set(org_id)
-        ref['os_attribute_set'] = self.get_os_set(os_id)
+        ref['org_attribute_set'] = self.get_org_attribute_set(org_id)
+        ref['os_attribute_set'] = self.get_os_attribute_set(os_id)
         return ref
 
     def _get_mapping(self, session, mapping_id):
@@ -242,7 +242,7 @@ class Mapping(sql.Base, Driver):
             return session.query(AttributeMapping).filter_by(
                 id=mapping_id).one()
         except sql.NotFound:
-            raise exception.ServiceNotFound(id=mapping_id)
+            raise exception.MappingNotFound(id=mapping_id)
 
     def delete_mapping(self, mapping_id):
         session = self.get_session()
@@ -263,14 +263,14 @@ class OrgAttributeSet(sql.ModelBase, sql.DictBase):
     extra = sql.Column(sql.JsonBlob())
 
     @classmethod
-    def from_dict(cls, org_set_dict):
+    def from_dict(cls, org_attribute_set_dict):
         extra = {}
-        for k, v in org_set_dict.copy().iteritems():
+        for k, v in org_attribute_set_dict.copy().iteritems():
             if k not in ['id', 'extra']:
-                extra[k] = org_set_dict.pop(k)
+                extra[k] = org_attribute_set_dict.pop(k)
 
-        org_set_dict['extra'] = extra
-        return cls(**org_set_dict)
+        org_attribute_set_dict['extra'] = extra
+        return cls(**org_attribute_set_dict)
 
     def to_dict(self):
         extra_copy = self.extra.copy()
