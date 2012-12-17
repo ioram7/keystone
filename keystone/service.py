@@ -107,8 +107,8 @@ class V3Router(wsgi.ComposingRouter):
         self.crud_routes(
             mapper,
             mapping.controllers.AttributeMappingController(),
-            'mappings',
-            'mapping')
+            'attribute_mappings',
+            'attribute_mapping')
 
         # Catalog
 

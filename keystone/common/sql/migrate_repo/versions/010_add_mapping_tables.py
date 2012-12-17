@@ -65,7 +65,8 @@ def upgrade(migrate_engine):
             'org_attribute_set_id',
             sql.String(64),
             sql.ForeignKey('org_attribute_set.id'),
-            nullable=False))
+            nullable=False),
+        Column('extra', sql.JsonBlob()))
 
     org_attribute_association.create(migrate_engine, checkfirst=True)
 
@@ -91,7 +92,8 @@ def upgrade(migrate_engine):
             sql.String(64),
             sql.ForeignKey('os_attribute_set.id'),
             nullable=False),
-        Column('type', sql.String(255)))
+        Column('type', sql.String(255)),
+        Column('extra', sql.JsonBlob()))
 
     os_attribute_association.create(migrate_engine, checkfirst=True)
 
@@ -109,7 +111,9 @@ def upgrade(migrate_engine):
             'org_attribute_set_id',
             sql.String(64),
             sql.ForeignKey('org_attribute_set.id'),
-            nullable=False))
+            nullable=False),
+        Column('extra', sql.JsonBlob()))
+
     attribute_mapping.create(migrate_engine, checkfirst=True)
 
 

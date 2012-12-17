@@ -29,9 +29,18 @@ class MappingTestCase(test_v3.RestfulTestCase):
             self.org_attribute_id,
             self.org_attribute.copy())
 
+        self.role_id = uuid.uuid4().hex
+        self.role = self.new_role_ref()
+        self.role['id'] = self.role_id
+        self.identity_api.create_role(
+            self.role_id,
+            self.role.copy())
+
         self.org_attribute_association_id = uuid.uuid4().hex
         self.org_attribute_association = self.new_org_attribute_association_ref()
         self.org_attribute_association['id'] = self.org_attribute_association_id
+        self.org_attribute_association['org_attribute_id'] = self.org_attribute_id
+        self.org_attribute_association['org_attribute_set_id'] = self.org_attribute_set_id
         self.mapping_api.create_org_attribute_association(
             self.org_attribute_association_id,
             self.org_attribute_association.copy())
@@ -39,14 +48,19 @@ class MappingTestCase(test_v3.RestfulTestCase):
         self.os_attribute_association_id = uuid.uuid4().hex
         self.os_attribute_association = self.new_os_attribute_association_ref()
         self.os_attribute_association['id'] = self.os_attribute_association_id
+        self.os_attribute_association['attribute_id'] = self.role_id
+        self.os_attribute_association['os_attribute_set_id'] = self.os_attribute_set_id
+        self.os_attribute_association['type'] = 'role'
         self.mapping_api.create_os_attribute_association(
             self.os_attribute_association_id,
             self.os_attribute_association.copy())
 
-        self.attribute_mapping = uuid.uuid4().hex
+        self.attribute_mapping_id = uuid.uuid4().hex
         self.attribute_mapping = self.new_attribute_mapping_ref()
         self.attribute_mapping['id'] = self.attribute_mapping_id
-        self.mapping_api.create_attribute_mapping(
+        self.attribute_mapping['org_attribute_set_id'] = self.org_attribute_set_id
+        self.attribute_mapping['os_attribute_set_id'] = self.os_attribute_set_id
+        self.mapping_api.create_mapping(
             self.attribute_mapping_id,
             self.attribute_mapping.copy())
 
@@ -209,9 +223,9 @@ class MappingTestCase(test_v3.RestfulTestCase):
             ref)
 
     def assertValidOrgAttributeAssociation(self, entity, ref=None):
-        self.assertIsNotNone(entity.get('name'))
+        self.assertIsNotNone(entity.get('id'))
         if ref:
-            self.assertEqual(ref['type'], entity['type'])
+            self.assertEqual(ref['org_attribute_id'], entity['org_attribute_id'])
         return entity
 
     def test_create_org_attribute_association(self):
@@ -256,7 +270,7 @@ class MappingTestCase(test_v3.RestfulTestCase):
             ref)
 
     def assertValidOsAttributeAssociation(self, entity, ref=None):
-        self.assertIsNotNone(entity.get('name'))
+        self.assertIsNotNone(entity.get('id'))
         if ref:
             self.assertEqual(ref['type'], entity['type'])
         return entity
@@ -302,9 +316,9 @@ class MappingTestCase(test_v3.RestfulTestCase):
             ref)
 
     def assertValidAttributeMapping(self, entity, ref=None):
-        self.assertIsNotNone(entity.get('name'))
+        self.assertIsNotNone(entity.get('id'))
         if ref:
-            self.assertEqual(ref['type'], entity['type'])
+            self.assertEqual(ref['org_attribute_set_id'], entity['org_attribute_set_id'])
         return entity
 
     def test_create_attribute_mapping(self):
