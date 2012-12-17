@@ -99,3 +99,115 @@ class Manager(manager.Manager):
 
     def get_mappings_from_attributes(self, context, attributes):
         return self.driver.get_mappings_from_attributes(attributes)
+
+
+class Driver(object):
+
+    def __init__(self):
+        super(Mapping)
+
+    # Organisational
+    #Sets
+    def create_org_attribute_set(self, org_set_id, org_set_ref):
+        raise exception.NotImplemented()
+
+    def get_org_set(self, set_id):
+        raise exception.NotImplemented()
+
+    def _get_org_set(self, session, set_id):
+        raise exception.NotImplemented()
+
+    def list_org_sets(self):
+        raise exception.NotImplemented()
+
+    def delete_org_set(self, set_id):
+        raise exception.NotImplemented()
+
+    # Attributes
+    def create_org_attribute(self, context, org_att_id, org_att_ref):
+        raise exception.NotImplemented()
+
+    def get_org_att(self, attribute_id):
+        raise exception.NotImplemented()
+
+    def _get_org_att(self, session, attribute_id):
+        raise exception.NotImplemented()
+
+    def list_org_atts(self):
+        raise exception.NotImplemented()
+
+    def delete_org_att(self, attribute_id):
+        raise exception.NotImplemented()
+
+    # Associations
+    def create_org_assoc(self, context, org_assoc_id, org_assoc_ref):
+        raise exception.NotImplemented()
+
+    def get_org_assoc(self, assoc_id):
+        raise exception.NotImplemented()
+
+    def _get_org_assoc(self, session, assoc_id):
+        raise exception.NotImplemented()
+
+    def list_org_assocs(self):
+        raise exception.NotImplemented()
+
+    def delete_org_assoc(self, assoc_id):
+        raise exception.NotImplemented()
+
+    # Openstack
+    #Sets
+    def create_os_attribute_set(self, context, os_set_id, os_set_ref):
+        raise exception.NotImplemented()
+
+    def get_os_set(self, set_id):
+        raise exception.NotImplemented()
+
+    def _get_os_set(self, session, set_id):
+        raise exception.NotImplemented()
+
+    def list_os_sets(self):
+        raise exception.NotImplemented()
+
+    def delete_os_set(self, set_id):
+        raise exception.NotImplemented()
+
+    def _get_os_set_details(self, session, set_id):
+        raise exception.NotImplemented()
+
+    # Associations
+    def create_os_assoc(self, context, os_assoc_id, os_assoc_ref):
+        raise exception.NotImplemented()
+
+    def get_os_assoc(self, assoc_id):
+        raise exception.NotImplemented()
+
+    def _get_os_assoc(self, session, assoc_id):
+        raise exception.NotImplemented()
+
+    def list_os_assocs(self):
+        raise exception.NotImplemented()
+
+    def delete_os_assoc(self, assoc_id):
+        raise exception.NotImplemented()
+
+    def _get_os_att(self, session, att_id, type):
+        raise exception.NotImplemented()
+
+    # Attribute Mapping
+    def create_mapping(self, context, mapping_id, mapping_ref):
+        raise exception.NotImplemented()
+
+    def get_mapping(self, mapping_id):
+        raise exception.NotImplemented()
+
+    def _get_mapping(self, session, mapping_id):
+        raise exception.NotImplemented()
+
+    def delete_mapping(self, mapping_id):
+        raise exception.NotImplemented()
+
+    def list_mappings(self):
+        raise exception.NotImplemented()
+
+
