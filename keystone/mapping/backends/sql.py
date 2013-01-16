@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import functools
+=======
+>>>>>>> bf50ba9992efc94c96285d93a0efa5a79017d7a0
 from keystone.mapping import Driver
 from keystone.common import sql
 from keystone.identity.backends import sql as identity

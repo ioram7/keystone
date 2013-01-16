@@ -1,6 +1,10 @@
 import uuid
 
+<<<<<<< HEAD
 from keystone.common import dependency
+=======
+from keystone.common import wsgi
+>>>>>>> bf50ba9992efc94c96285d93a0efa5a79017d7a0
 from keystone.common import manager
 from keystone.common import logging
 from keystone import config
