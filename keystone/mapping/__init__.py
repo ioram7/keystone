@@ -16,7 +16,4 @@
 
 from keystone.mapping.core import *
 from keystone.mapping import controllers
-<<<<<<< HEAD
 from keystone.mapping import routers
-=======
->>>>>>> bf50ba9... Added attribute mapping service

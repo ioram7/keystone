@@ -215,18 +215,9 @@ class TestCase(NoModule, unittest.TestCase):
             CONF.set_override(k, v)
 
     def load_backends(self):
-<<<<<<< HEAD
         """Create shortcut references to each driver for data manipulation."""
         for name, manager in initialize_drivers().iteritems():
             setattr(self, name, manager.driver)
-=======
-        """Hacky shortcut to load the backends for data manipulation."""
-        self.identity_api = importutils.import_object(CONF.identity.driver)
-        self.token_api = importutils.import_object(CONF.token.driver)
-        self.catalog_api = importutils.import_object(CONF.catalog.driver)
-        self.policy_api = importutils.import_object(CONF.policy.driver)
-        self.mapping_api = importutils.import_object(CONF.mapping.driver)
->>>>>>> bf50ba9... Added attribute mapping service
 
     def load_fixtures(self, fixtures):
         """Hacky basic and naive fixture loading based on a python module.
