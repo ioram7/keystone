@@ -116,26 +116,16 @@ class SqlUpgradeTests(test.TestCase):
         self.assertEqual(a_tenant.description, 'description')
         session.commit()
 
-<<<<<<< HEAD
     def test_upgrade_13_to_14(self):
 
         self.assertEqual(self.schema.version, 0)
         self.upgrade(13)
         self.upgrade(14)
         self.assertEqual(self.schema.version, 14)
-=======
-    def test_upgrade_9_to_10(self):
-
-        self.assertEqual(self.schema.version, 0)
-        self._migrate(self.repo_path, 9)
-        self._migrate(self.repo_path, 10)
-        self.assertEqual(self.schema.version, 10)
->>>>>>> bf50ba9... Added attribute mapping service
         self.assertTableColumns("org_attribute_set",
                                 ["id", "extra"])
         self.assertTableColumns("org_attribute",
                                 ["id", "type", "value", "extra"])
-<<<<<<< HEAD
         self.assertTableColumns("os_attribute_set",
                                 ["id", "extra"])
         self.assertTableColumns("os_attribute_association",
@@ -146,26 +136,6 @@ class SqlUpgradeTests(test.TestCase):
                                  "org_attribute_set_id", "extra"])
 
     def test_downgrade_14_to_13(self):
-=======
-        self.assertTableColumns("org_attribute_association",
-                                ["id", "org_attribute_id",
-                                 "org_attribute_set_id", "extra"])
-        self.assertTableColumns("os_attribute_set",
-                                ["id", "extra"])
-        self.assertTableColumns("os_attribute_association",
-                                ["id", "attribute_id",
-                                 "os_attribute_set_id", "type", "extra"])
-        self.assertTableColumns("attribute_mapping",
-                                ["id", "org_attribute_set_id",
-                                 "os_attribute_set_id", "extra"])
-
-    def test_downgrade_10_to_9(self):
-        self.assertEqual(self.schema.version, 0)
-        self._migrate(self.repo_path, 10)
-        self._migrate(self.repo_path, 9, False)
-
-    def test_downgrade_9_to_7(self):
->>>>>>> bf50ba9... Added attribute mapping service
         self.assertEqual(self.schema.version, 0)
         self.upgrade(14)
         self.downgrade(13)
