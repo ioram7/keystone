@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import datetime
 import functools
 
 from keystone import clean
@@ -22,7 +23,7 @@ from keystone.common.sql import migration
 from keystone.common import utils
 from keystone import exception
 from keystone import identity
-
+from keystone.openstack.common import timeutils
 
 def handle_conflicts(type='object'):
     """Converts IntegrityError into HTTP 409 Conflict."""
@@ -39,10 +40,11 @@ def handle_conflicts(type='object'):
 
 class User(sql.ModelBase, sql.DictBase):
     __tablename__ = 'user'
-    attributes = ['id', 'name', 'password', 'enabled']
+    attributes = ['id', 'name', 'expires', 'password', 'enabled']
     id = sql.Column(sql.String(64), primary_key=True)
     name = sql.Column(sql.String(64), unique=True, nullable=False)
     password = sql.Column(sql.String(128))
+    expires = sql.Column(sql.DateTime)
     enabled = sql.Column(sql.Boolean)
     extra = sql.Column(sql.JsonBlob())
 
@@ -715,6 +717,13 @@ class Identity(sql.Base, identity.Driver):
 
     def get_user_by_name(self, user_name):
         return identity.filter_user(self._get_user_by_name(user_name))
+
+    def get_expired_users(self):
+        session = self.get_session()
+        now = datetime.datetime.utcnow()
+        user_refs = session.query(User).filter("user.expires is not NULL")
+        user_refs = user_refs.filter(User.expires < now)
+        return [identity.filter_user(x.to_dict()) for x in user_refs]
 
     @handle_conflicts(type='user')
     def update_user(self, user_id, user):

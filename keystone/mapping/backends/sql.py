@@ -80,13 +80,73 @@ class Mapping(sql.Base, Driver):
             session.delete(ref)
             session.flush()
 
+    def add_issuer_to_attribute(self, org_attribute_id,
+                                 service_id):
+        session = self.get_session()
+        self.get_org_attribute(org_attribute_id)
+        #self.get_service(service_id)
+        query = session.query(OrgAttributeIdpMembership)
+        query = query.filter_by(
+            org_attribute_id=org_attribute_id)
+        query = query.filter_by(service_id=service_id)
+        existing = query.first()
+        if existing:
+            return
+        with session.begin():
+            assoc = OrgAttributeIdpMembership(
+                org_attribute_id=org_attribute_id,
+                service_id=service_id)
+            session.add(assoc)
+            session.flush()
+
+    def check_attribute_can_be_issued(self, org_attribute_id,
+                                 service_id):
+        session = self.get_session()
+        self.get_org_attribute(org_attribute_id)
+        #self.get_service(service_id)
+        query = session.query(OrgAttributeIdpMembership)
+        query = query.filter_by(
+            org_attribute_id=org_attribute_id)
+        query = query.filter_by(service_id=service_id)
+        existing = query.first()
+        if not existing:
+            raise exception.NotFound("Attribute cannot be issued")
+        session.flush()
+
+    def list_issuers_for_attribute(self, org_attribute_id):
+        session = self.get_session()
+        self.get_org_attribute(org_attribute_id)
+        #self.get_service(service_id)
+        query = session.query(OrgAttributeIdpMembership)
+        query = query.filter_by(
+            org_attribute_id=org_attribute_id)
+        qs = query.all()
+        return [q.service_id for q in qs]
+
+    def remove_issuer_from_attribute(self, org_attribute_id,
+                                     service_id):
+        session = self.get_session()
+        self.get_org_attribute(org_attribute_id)
+        #self.get_service(service_id)
+        query = session.query(OrgAttributeIdpMembership)
+        query = query.filter_by(
+            org_attribute_id=org_attribute_id)
+        query = query.filter_by(service_id=service_id)
+        existing = query.first()
+        if not existing:
+            raise exception.NotFound("Attribute cannot be issued")
+        query.delete()
+        session.flush()
+
     def list_attributes_in_org_set(self, org_attribute_set_id):
         session = self.get_session()
         self.get_org_attribute_set(org_attribute_set_id)
         query = session.query(OrgAttributeAssociation)
         query = query.filter_by(
             org_attribute_set_id=org_attribute_set_id)
-        return [q.id for q in list(query.all())]
+        qs = list(query.all())
+        session.flush()
+        return [self.get_org_attribute(q.org_attribute_id) for q in qs]
 
     def list_org_sets_containing_attribute(self, org_attribute_id):
         session = self.get_session()
@@ -94,7 +154,9 @@ class Mapping(sql.Base, Driver):
         query = session.query(OrgAttributeAssociation)
         query = query.filter_by(
             org_attribute_id=org_attribute_id)
-        return [q.id for q in list(query.all())]
+        qs = list(query.all())
+        session.flush()
+        return [self.get_org_attribute_set(q.id) for q in qs]
 
     def check_attribute_in_org_set(self, org_attribute_set_id,
                                    attribute_id):
@@ -108,6 +170,7 @@ class Mapping(sql.Base, Driver):
         existing = query.first()
         if not existing:
             raise exception.NotFound("Attribute not member of set")
+        session.flush()
 
     def remove_attribute_from_org_set(self, org_attribute_set_id,
                                       attribute_id):
@@ -192,12 +255,13 @@ class Mapping(sql.Base, Driver):
         session = self.get_session()
         assocs = session.query(OsAttributeAssociation)
         assocs = assocs.filter_by(os_attribute_set_id=os_attribute_set_id)
-        return [{s.id: s.type} for s in list(assocs)]
+        return [{s.attribute_id: s.type} for s in list(assocs)]
 
     def list_os_sets_containing_attribute(self, attribute_id):
         session = self.get_session()
         assocs = session.query(OsAttributeAssociation)
         assocs = assocs.filter_by(attribute_id=attribute_id)
+        session.flush()
         return [s.id for s in list(assocs)]
 
     def check_attribute_in_os_set(self, os_attribute_set_id,
@@ -212,6 +276,7 @@ class Mapping(sql.Base, Driver):
         existing = query.first()
         if not existing:
             raise exception.NotFound("Attribute not member of set")
+        session.flush()
 
     def remove_attribute_from_os_set(self, os_attribute_set_id,
                                      attribute_id, type):
@@ -246,6 +311,56 @@ class Mapping(sql.Base, Driver):
                 attribute_id=attribute_id, type=type)
             session.add(assoc)
             session.flush()
+
+
+    # Permissions
+    def add_permission(self, admin_role_id, attribute_id, type):
+        session = self.get_session()
+        query = session.query(AdminRolePermission)
+        query = query.filter_by(
+            admin_role_id=admin_role_id)
+        query = query.filter_by(attribute_id=attribute_id)
+        query = query.filter_by(type=type)
+        existing = query.first()
+        if existing:
+            return
+        with session.begin():
+            assoc = AdminRolePermission(
+                admin_role_id=admin_role_id,
+                attribute_id=attribute_id, type=type)
+            session.add(assoc)
+            session.flush()
+
+    def check_permission(self, admin_role_id, attribute_id, type):
+        session = self.get_session()
+        query = session.query(AdminRolePermission)
+        query = query.filter_by(
+            admin_role_id=admin_role_id)
+        query = query.filter_by(attribute_id=attribute_id)
+        query = query.filter_by(type=type)
+        existing = query.first()
+        if not existing:
+            raise exception.NotFound("Attribute cannot be mapped")
+        session.flush()
+
+    def revoke_permission(self, admin_role_id, attribute_id, type):
+        session = self.get_session()
+        query = session.query(AdminRolePermission)
+        query = query.filter_by(
+            admin_role_id=admin_role_id)
+        query = query.filter_by(attribute_id=attribute_id)
+        query = query.filter_by(type=type)
+        existing = query.first()
+        if not existing:
+            raise exception.NotFound("No permission found to revoke")
+        query.delete()
+        session.flush()
+
+    def list_admin_role_permissions(self, admin_role_id):
+        session = self.get_session()
+        assocs = session.query(AdminRolePermission)
+        assocs = assocs.filter_by(admin_role_id=admin_role_id)
+        return [{s.attribute_id: s.type} for s in list(assocs)]
 
     # Attribute Mapping
     def create_attribute_set_mapping(self, context, mapping_ref):
@@ -306,6 +421,13 @@ class OrgAttribute(sql.ModelBase, sql.DictBase):
     value = sql.Column(sql.String(255))
     extra = sql.Column(sql.JsonBlob())
 
+class OrgAttributeIdpMembership(sql.ModelBase, sql.DictBase):
+    __tablename__ = 'org_attribute_idp_membership'
+    org_attribute_id = sql.Column(
+        sql.String(64), sql.ForeignKey('org_attribute.id'), primary_key=True)
+    service_id = sql.Column(
+        sql.String(64),  sql.ForeignKey('service.id'),
+        primary_key=True)
 
 class OrgAttributeAssociation(sql.ModelBase, sql.DictBase):
     __tablename__ = 'org_attribute_association'
@@ -341,3 +463,12 @@ class AttributeMapping(sql.ModelBase, sql.DictBase):
     os_attribute_set_id = sql.Column(
         sql.String(64),  sql.ForeignKey('os_attribute_set.id'))
     extra = sql.Column(sql.JsonBlob())
+
+
+class AdminRolePermission(sql.ModelBase, sql.DictBase):
+    __tablename__ = 'admin_role_perm'
+    attribute_id = sql.Column(sql.String(64), primary_key=True)
+    admin_role_id = sql.Column(
+        sql.String(64),  sql.ForeignKey('os_attribute_set.id'),
+        primary_key=True)
+    type = sql.Column(sql.String(255), primary_key=True)

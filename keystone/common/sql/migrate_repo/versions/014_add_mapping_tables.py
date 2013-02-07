@@ -41,6 +41,43 @@ def upgrade(migrate_engine):
 
     org_attribute.create(migrate_engine, checkfirst=True)
 
+    sql.Table('service', meta, autoload=True)
+    org_attribute_idp_membership = sql.Table(
+        'org_attribute_idp_membership',
+        meta,
+        sql.Column(
+            'org_attribute_id',
+            sql.String(64),
+            sql.ForeignKey('org_attribute.id'),
+            primary_key=True),
+        sql.Column(
+            'service_id',
+            sql.String(64),
+            sql.ForeignKey('service.id'),
+            primary_key=True))
+
+    org_attribute_idp_membership.create(migrate_engine, checkfirst=True)
+
+    sql.Table('role', meta, autoload=True)
+    admin_role_perm = sql.Table(
+        'admin_role_perm',
+        meta,
+        sql.Column(
+            'admin_role_id',
+            sql.String(64),
+            sql.ForeignKey('org_attribute.id'),
+            primary_key=True),
+        sql.Column(
+            'attribute_id',
+            sql.String(64),
+            primary_key=True),
+        sql.Column(
+            'type',
+            sql.String(64),
+            primary_key=True))
+
+    admin_role_perm.create(migrate_engine, checkfirst=True)
+
     org_attribute_association = sql.Table(
         'org_attribute_association',
         meta,

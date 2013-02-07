@@ -86,6 +86,7 @@ class IdentityTests(object):
             'id': 'no_meta',
             'name': 'NO_META',
             'password': 'no_meta2',
+            'expires': None,
         }
         self.identity_api.create_user(user['id'], user)
         self.identity_api.add_user_to_tenant(self.tenant_baz['id'], user['id'])

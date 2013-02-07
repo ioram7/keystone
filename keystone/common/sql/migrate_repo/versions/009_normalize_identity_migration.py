@@ -83,10 +83,12 @@ def upgrade_user_table(meta, migrate_engine):
     user_table = Table('user', meta, autoload=True)
     maker = sessionmaker(bind=migrate_engine)
     session = maker()
-
+    print "At start of upgrade function"
     new_user_data = []
     for a_user in session.query(user_table):
-        id, name, extra, password, enabled = a_user
+        print a_user
+        id, name, expires, extra, password, enabled = a_user
+        print expires
         extra_parsed = json.loads(extra)
         if 'password' in extra_parsed:
             password = extra_parsed['password']

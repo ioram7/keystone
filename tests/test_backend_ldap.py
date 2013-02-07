@@ -209,6 +209,7 @@ class LDAPIdentity(test.TestCase, test_backend.IdentityTests):
                      test.testsdir('backend_ldap.conf')])
         user_ref = self.identity_api.get_user(self.user_foo['id'])
         self.user_foo.pop('password')
+        print user_ref
         self.assertDictEqual(user_ref, self.user_foo)
 
         CONF.ldap.user_filter = '(CN=DOES_NOT_MATCH)'
@@ -263,6 +264,7 @@ class LDAPIdentity(test.TestCase, test_backend.IdentityTests):
         CONF.ldap.user_name_attribute = 'sn'
         CONF.ldap.user_mail_attribute = 'email'
         CONF.ldap.user_enabled_attribute = 'enabled'
+        CONF.ldap.user_expires_attribute = 'accountExpires'
         clear_database()
         self.identity_api = identity_ldap.Identity()
         self.load_fixtures(default_fixtures)

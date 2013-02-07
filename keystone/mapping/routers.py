@@ -32,6 +32,9 @@ def append_v3_routers(mapper, routers):
     routers.append(
         router.Router(controllers.AttributeSetMappingController(),
                       'attribute_set_mappings', 'attribute_set_mapping'))
+    routers.append(
+        router.Router(controllers.AttributeMappingController(),
+                      'attribute_mappings', 'attribute_mapping'))
 
     mapper.connect('/os_attribute_sets/{os_attribute_set_id}/attributes',
                    controller=controllers.OsMappingController(),
@@ -71,3 +74,71 @@ def append_v3_routers(mapper, routers):
                    controller=controllers.OrgMappingController(),
                    action='remove_attribute_from_org_set',
                    conditions=dict(method=['DELETE']))
+
+    mapper.connect('/org_attributes/{org_attribute_id}/issuers',
+                   controller=controllers.OrgMappingController(),
+                   action='list_issuers_for_attribute',
+                   conditions=dict(method=['GET']))
+    mapper.connect('/services/{service_id}/attributes',
+                   controller=controllers.OrgMappingController(),
+                   action='list_attributes_for_issuer',
+                   conditions=dict(method=['GET']))
+    mapper.connect('/org_attributes/{org_attribute_id}/'
+                   + 'issuers/{service_id}',
+                   controller=controllers.OrgMappingController(),
+                   action='add_issuer_to_attribute',
+                   conditions=dict(method=['PUT']))
+    mapper.connect('/org_attributes/{org_attribute_id}/'
+                   + 'issuers/{service_id}',
+                   controller=controllers.OrgMappingController(),
+                   action='remove_issuer_from_attribute',
+                   conditions=dict(method=['DELETE']))
+    mapper.connect('/org_attributes/{org_attribute_id}/'
+                   + 'issuers/{service_id}',
+                   controller=controllers.OrgMappingController(),
+                   action='check_attribute_can_be_issued',
+                   conditions=dict(method=['HEAD']))
+
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='list_admin_role_permissions',
+                   conditions=dict(method=['GET']))
+
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/roles/{role_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='add_role_permission',
+                   conditions=dict(method=['PUT']))
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/projects/{project_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='add_project_permission',
+                   conditions=dict(method=['PUT']))
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/domains/{domain_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='add_domain_permission',
+                   conditions=dict(method=['PUT']))
+
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/roles/{role_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='revoke_role_permission',
+                   conditions=dict(method=['DELETE']))
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/projects/{project_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='revoke_project_permission',
+                   conditions=dict(method=['DELETE']))
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/domains/{domain_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='revoke_domain_permission',
+                   conditions=dict(method=['DELETE']))
+
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/roles/{role_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='check_role_permission',
+                   conditions=dict(method=['HEAD']))
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/projects/{project_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='check_project_permission',
+                   conditions=dict(method=['HEAD']))
+    mapper.connect('/admin-role-permissions/{admin_role_id}/permissions/domains/{domain_id}',
+                   controller=controllers.AdminRolePermissionController(),
+                   action='check_domain_permission',
+                   conditions=dict(method=['HEAD']))

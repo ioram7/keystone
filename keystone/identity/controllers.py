@@ -23,7 +23,7 @@ import uuid
 from keystone.common import controller
 from keystone.common import logging
 from keystone import exception
-
+from keystone.openstack.common import timeutils
 
 LOG = logging.getLogger(__name__)
 
@@ -454,6 +454,10 @@ class UserV3(controller.V3Controller):
     @controller.protected
     def create_user(self, context, user):
         ref = self._assign_unique_id(self._normalize_dict(user))
+        expires = user.get('expires', None)
+        if expires is not None:
+            print "Parsing"
+            ref['expires'] = timeutils.parse_strtime(expires)
         ref = self.identity_api.create_user(context, ref['id'], ref)
         return {'user': ref}
 
@@ -478,6 +482,11 @@ class UserV3(controller.V3Controller):
 
         ref = self.identity_api.update_user(context, user_id, user)
         return {'user': ref}
+
+    @controller.protected
+    def get_expired_users(self, context):
+        ref = self.identity_api.get_expired_users(context)
+        return {'users': ref}
 
     @controller.protected
     def add_user_to_group(self, context, user_id, group_id):

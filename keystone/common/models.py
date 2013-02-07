@@ -92,11 +92,12 @@ class User(Model):
         password
         description
         email
+        expires
         enabled (bool, default True)
     """
 
     required_keys = ('id', 'name')
-    optional_keys = ('password', 'description', 'email', 'enabled')
+    optional_keys = ('password', 'description', 'email', 'expires', 'enabled')
 
 
 class Group(Model):
