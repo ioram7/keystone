@@ -35,11 +35,13 @@ USERS = [
         'id': 'foo',
         'name': 'FOO',
         'password': 'foo2',
+        'expires': None, 
         'tenants': ['bar']
     }, {
         'id': 'two',
         'name': 'TWO',
         'password': 'two2',
+        'expires': None,
         'email': 'two@example.com',
         'enabled': True,
         'tenant_id': 'baz',
@@ -48,6 +50,7 @@ USERS = [
         'id': 'badguy',
         'name': 'BadGuy',
         'password': 'bad',
+        'expires': None,
         'email': 'bad@guy.com',
         'enabled': False,
         'tenant_id': 'baz',

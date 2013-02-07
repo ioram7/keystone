@@ -125,6 +125,7 @@
 # user_mail_attribute = email
 # user_pass_attribute = userPassword
 # user_enabled_attribute = enabled
+# user_expires_attribute = expires
 # user_enabled_mask = 0
 # user_enabled_default = True
 # user_attribute_ignore = tenant_id,tenants

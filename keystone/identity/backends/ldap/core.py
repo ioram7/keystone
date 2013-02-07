@@ -189,7 +189,9 @@ class Identity(identity.Driver):
     # CRUD
     def create_user(self, user_id, user):
         user['name'] = clean.user_name(user['name'])
-        return identity.filter_user(self.user.create(user))
+        unfiltered_user = self.user.create(user)
+        filtered = identity.filter_user(unfiltered_user)
+        return filtered
 
     def update_user(self, user_id, user):
         if 'name' in user:
@@ -355,9 +357,11 @@ class UserApi(common_ldap.BaseLdap, ApiShimMixin):
     attribute_mapping = {'password': 'userPassword',
                          'email': 'mail',
                          'name': 'sn',
-                         'enabled': 'enabled'}
+                         'enabled': 'enabled',
+                         'expires': 'accountExpires'}
 
     model = models.User
+    print model
 
     def __init__(self, conf):
         super(UserApi, self).__init__(conf)
@@ -365,6 +369,7 @@ class UserApi(common_ldap.BaseLdap, ApiShimMixin):
         self.attribute_mapping['email'] = conf.ldap.user_mail_attribute
         self.attribute_mapping['password'] = conf.ldap.user_pass_attribute
         self.attribute_mapping['enabled'] = conf.ldap.user_enabled_attribute
+        self.attribute_mapping['expires'] = conf.ldap.user_expires_attribute
         self.enabled_mask = conf.ldap.user_enabled_mask
         self.enabled_default = conf.ldap.user_enabled_default
         self.attribute_ignore = (getattr(conf.ldap, 'user_attribute_ignore')
@@ -409,7 +414,10 @@ class UserApi(common_ldap.BaseLdap, ApiShimMixin):
         values = utils.hash_ldap_user_password(values)
         if self.enabled_mask:
             self.mask_enabled_attribute(values)
+        print "BEFORE SUPER"
+        print values
         values = super(UserApi, self).create(values)
+        print values
         tenant_id = values.get('tenant_id')
         if tenant_id is not None:
             self.tenant_api.add_user(values['tenant_id'], values['id'])

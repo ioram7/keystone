@@ -194,6 +194,7 @@ register_str('user_name_attribute', group='ldap', default='sn')
 register_str('user_mail_attribute', group='ldap', default='email')
 register_str('user_pass_attribute', group='ldap', default='userPassword')
 register_str('user_enabled_attribute', group='ldap', default='enabled')
+register_str('user_expires_attribute', group='ldap', default='accountExpires')
 register_int('user_enabled_mask', group='ldap', default=0)
 register_str('user_enabled_default', group='ldap', default='True')
 register_list('user_attribute_ignore', group='ldap',

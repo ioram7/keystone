@@ -70,7 +70,7 @@ class SqlUpgradeTests(test.TestCase):
 
     def test_upgrade_0_to_1(self):
         self.upgrade(1)
-        self.assertTableColumns("user", ["id", "name", "extra"])
+        self.assertTableColumns("user", ["id", "name", "expires", "extra"])
         self.assertTableColumns("tenant", ["id", "name", "extra"])
         self.assertTableColumns("role", ["id", "name"])
         self.assertTableColumns("user_tenant_membership",
@@ -92,7 +92,7 @@ class SqlUpgradeTests(test.TestCase):
         self.populate_tenant_table()
         self.upgrade(9)
         self.assertTableColumns("user",
-                                ["id", "name", "extra", "password",
+                                ["id", "name", "expires", "extra", "password",
                                  "enabled"])
         self.assertTableColumns("tenant",
                                 ["id", "name", "extra", "description",
@@ -320,10 +320,11 @@ class SqlUpgradeTests(test.TestCase):
             extra = copy.deepcopy(user)
             extra.pop('id')
             extra.pop('name')
-            self.engine.execute("insert into user values ('%s', '%s', '%s')"
-                                % (user['id'],
-                                   user['name'],
-                                   json.dumps(extra)))
+            self.engine.execute(
+                "insert into user (id, name, extra) values ('%s', '%s', '%s')"
+                % (user['id'],
+                user['name'],
+                json.dumps(extra)))
 
     def populate_tenant_table(self):
         for tenant in default_fixtures.TENANTS:

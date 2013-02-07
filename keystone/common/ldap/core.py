@@ -186,14 +186,13 @@ class BaseLdap(object):
             msg = _('LDAP backend does not allow %s create') \
                 % self.options_name
             raise exception.ForbiddenAction(msg)
-
         conn = self.get_connection()
         object_classes = self.structural_classes + [self.object_class]
         attrs = [('objectClass', object_classes)]
         for k, v in values.iteritems():
             if k == 'id' or k in self.attribute_ignore:
-                continue
-            if v is not None:
+                continue 
+            if v is not None or k == 'expires':
                 attr_type = self.attribute_mapping.get(k, k)
                 attrs.append((attr_type, [v]))
 
