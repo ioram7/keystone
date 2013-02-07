@@ -50,10 +50,16 @@ Created on 30 Jan 2013
 @author: Kristy Siu
 '''
 from keystone import catalog
+from keystone import identity
+from keystone import token
 from keystone.mapping import controllers
-import directory
+from keystone.middleware.federated import directory
 
+import uuid
+import imp
+import os
 import logging
+import json
 
 import webob.dec
 import webob.exc
@@ -105,43 +111,62 @@ class FederatedAuthentication(object):
         data = simplejson.loads(body)
        
         if 'idpResponse' in data:
-            username, validatedUserAttributes = self.validate(data)		
+            username, validatedUserAttributes = self.validate(data, data['realm'])		
             identity_api = identity.controllers.UserV3()
-            user_ref = {'name': username} 
-            user = identity_api.create_user({'is_admin': True}, user_ref)
-            return self.mapAttributes(data, validatedUserAttributes, user)
-            
+            tempPass = uuid.uuid4().hex
+            user_ref = {'name': username, 'password': tempPass} 
+            user = identity_api.create_user({'is_admin': True}, user=user_ref)['user']
+            resp = {}
+            resp['unscopedToken'], resp['tenants'] = self.mapAttributes(data, validatedUserAttributes, user, tempPass)
+            LOG.debug(resp)
+            return valid_Response(resp)
 
         else:
             if 'realm' in data:
                 realm_id = data['realm']
-                self.getRequest(realm_id)
+                return self.getRequest(realm_id)
             
-            return discovery.getRealmList()
+            return directory.getProviderList()
 
-    def getRequest(self, realm_id):
+    def getRequest(self, realm):
         ''' Get an authentication request to return to the client '''
-        catalog = catalog.ServiceController()
-        service = catalog.getService(context, realm_id)
-        type = service["type"].split('.')[1]
-        processing_module = load_protocol_module(type)
+        catalog_api = catalog.controllers.ServiceV3()
+        endpoint_api = catalog.controllers.EndpointV3()
+        context = {'is_admin': True}
+        service = catalog_api.get_service(context=context, service_id=realm['service_id'])['service']
+        protocol = service['type'].split('.')[1]
+        processing_module = load_protocol_module(protocol)
+        context['query_string'] = {}
+        context['query_string']['service_id'] = service['id']
+        endpoints = endpoint_api.list_endpoints(context)['endpoints']
+        endpoint = None
+        print endpoints
+        if not len(endpoints) < 1:
+            for e in endpoints:
+                if e['interface'] == 'public':
+                    endpoint = e['url']
+        else:
+            LOG.error('No endpoint found for this service')
         ris = processing_module.RequestIssuingService()
-        return ris.getIdPRequest(self.conf['requestSigningKey'], self.conf['SPName'])
+        return ris.getIdPRequest(self.conf['requestSigningKey'], self.conf['SPName'], endpoint)
 
-    def validate(self, data):
+    def validate(self, data, realm):
         ''' Get the validated attributes '''
-        catalog = catalog.ServiceController()
-        service = catalog.getService(context, realm_id)
+        catalog_api = catalog.controllers.ServiceV3()
+        context = {'is_admin': True}
+        service = catalog_api.get_service(context=context, service_id=realm['service_id'])['service']
         type = service["type"].split('.')[1]
         processing_module = load_protocol_module(type)
         cred_validator = processing_module.CredentialValidator()
-        return cred_validator.validate(data['idpResponse'])
+        return cred_validator.validate(data['idpResponse'], service['id'])
 
-    def mapAttributes(self, data, attributes, user):
+    def mapAttributes(self, data, attributes, user, password):
         mapper = controllers.AttributeMappingController()
         identity_api = identity.controllers.UserV3()
+        legacy_identity_api = identity.controllers.User()
+        project_api = identity.controllers.ProjectV3()
         context = {'is_admin': True}
-        toMap = mapper.map(context, attributes)
+        toMap = mapper.map(context, attributes=attributes)['attribute_mappings']
         user_id = user['id']
         roles = []
         projects = []
@@ -152,22 +177,31 @@ class FederatedAuthentication(object):
             if v == 'project':
                 projects.append(k)
             if v == 'domain':
-                roles.append(k)
+                domains.append(k)
         for d in domains:
             for p in projects:
                 identity_api.add_user_to_project(context, user_id=user_id, project_id=p)
                 for r in roles:
                     identity_api.add_role_to_user(context, user_id=user_id, project_id=p, role_id=r)
-
-        token_api = token.controllers.TokenController()
-        token = token_api.create_token(context, user_id)
-        return token, [identity_api.get_projects_for_user(context, user_id]
+        if len(domains) == 0:
+            for p in projects:
+                user['tenantId'] = p
+                print('\n\n\n\n\n')
+                print legacy_identity_api.update_user_tenant(context, user_id=user_id, user=user)
+                for r in roles:
+                    identity_api.add_role_to_user(context, user_id=user_id, project_id=p, role_id=r)
+        LOG.debug(user)
+        context['query_string'] = {}
+        token_api = token.controllers.Auth()
+        unscoped_token = token_api.authenticate(context, auth={'passwordCredentials': {'username': user['name'], 'password': password}})
+        return unscoped_token, [project_api.get_project(context, project_id=p)['project']  for p in projects]
                     
 
-def load_protocol_module(self, protocol):
+def load_protocol_module(protocol):
     ''' Dynamically load correct module for processing authentication
         according to identity provider's protocol'''
-    return imp.load_source(protocol, protocol+".py")
+    print os.path.dirname(__file__)
+    return imp.load_source(protocol, os.path.dirname(__file__)+'/'+protocol+".py")
         
 
 def filter_factory(global_conf, **local_conf):
@@ -178,3 +212,8 @@ def filter_factory(global_conf, **local_conf):
     def auth_filter(app):
         return FederatedAuthentication(app, conf)
     return auth_filter
+
+def valid_Response(response):
+    resp = webob.Response(content_type='application/json')
+    resp.body = json.dumps(response)
+    return resp

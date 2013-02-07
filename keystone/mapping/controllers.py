@@ -185,7 +185,21 @@ class AttributeMappingController(controller.V3Controller):
         return {'attribute_mapping': self._get_attribute_mapping(context,
                                                                  mapping)}
 
-
+    def map(self, context, attributes=None):
+        org_mapping_api = OrgMappingController()
+        # Convert type=value attributes into IDs
+        att_ids = []
+        for att in attributes:
+           for val in attributes[att]:
+               org_atts = org_mapping_api.list_org_attributes(context)['org_attributes']
+               LOG.debug("The retrieved Org Atts are:")
+               LOG.debug(org_atts)
+               for org_att in org_atts:
+                   if org_att['type'] == att:
+                       if org_att['value'] == val or org_att['value'] is None:
+                           if not org_att['id'] in att_ids:
+                               att_ids.append(org_att['id'])
+        return {'attribute_mappings': {'role': 'member', '8a16d56d489a4a0a9d4b3b638a32b8be': 'project'}}
 class OrgMappingController(controller.V3Controller):
 
     # Sets

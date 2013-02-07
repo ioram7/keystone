@@ -51,6 +51,7 @@ Created on 1 Feb 2013
 '''
 
 import logging
+import urlparse
 import sys
 import uuid
 sys.path.insert(0, '../')
@@ -64,9 +65,14 @@ import webbrowser
 import urllib2
 import zlib
 import base64
+import webob.dec
+import webob.exc
+import json
+
+from keystone import mapping
 LOG = logging.getLogger(__name__)
 
-class ExampleRIS(object):
+class RequestIssuingService(object):
     def __init__(self):
         self.tmpl_req = """<samlp:AuthnRequest
         xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
@@ -99,9 +105,13 @@ class ExampleRIS(object):
 </Signature>
         </samlp:AuthnRequest>"""
 
-    def getIdPRequest(self,key, issuer):
+    def getIdPRequest(self,key, issuer, endpoint):
         LOG.info('IssueRequest')
-        return self.create_IdpRequest(key, issuer)
+        resp = {}
+        resp['idpRequest'] = '?'+self.create_IdpRequest(key, issuer)
+        resp['idpEndpoint'] = endpoint
+        return valid_Response(resp)
+
     def sign(self,doc, key):
         node = xmlsec.findNode(doc, xmlsec.dsig("Signature"))
         if node == None:
@@ -165,48 +175,58 @@ class ExampleRIS(object):
 
         return req
 
-class Validator(object):
+class CredentialValidator(object):
     
     def __init__(self):
-        self.org_mapping_api = mapping.OrgMappingController()
-        self.mapping_api = AttributeMappingController()
+        self.org_mapping_api = mapping.controllers.OrgMappingController()
+        self.mapping_api = mapping.controllers.AttributeMappingController()
     
     def __call__(self):
         return None
         
-    def validate(self, data):
-	resp = urlparse.parse_qsl(data['idpResponse'])
-	k, v = resp[0]
+    def validate(self, data, realm_id):
+        resp = urlparse.parse_qsl(data)
+        k, v = resp[0]
         resp = base64.b64decode(v)
-	resp = etree.ElementTree(etree.fromstring(resp))
-	atts = {}
-	names = []
+        resp = ElementTree(fromstring(resp))
+        atts = {}
+        names = []
         for name in resp.iter("{urn:oasis:names:tc:SAML:2.0:assertion}NameID"):
-                names.append(name.text)
+            names.append(name.text)
         if(len(names) > 0):
-                atts["NameID"] = names
-	for att in resp.iter("{urn:oasis:names:tc:SAML:2.0:assertion}Attribute"):
-	    ats = []
-	    for value in att.iter("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue"):
-		ats.append(value.text) 
-	    atts[att.get("Name")] = ats
-        return self.check_issuers(data, atts)
+            atts["NameID"] = names
+	    for att in resp.iter("{urn:oasis:names:tc:SAML:2.0:assertion}Attribute"):
+	        ats = []
+	        for value in att.iter("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue"):
+		    ats.append(value.text) 
+	        atts[att.get("Name")] = ats
+        return names[0], self.check_issuers(data, atts, realm_id)
 
-    def check_issuers(self, data, atts):
+    def check_issuers(self, data, atts, realm_id):
         context = {"is_admin": True}
         valid_atts = {}
         for att in atts:
            for val in atts[att]:
-               att_id = self.org_mapping_api.get_id_for_org_attribute(context, att, val)
-               try:
-                   self.org_mapping_api.check_attribute_can_be_issued(context, data["idp"], att_id)
-                   if valid_atts[att] is not None:
-                       valid_atts[att] = [val]
-                   else:
-                       valid_atts[att].append(val)
-               except exception.NotFoundException:
-                   pass
+               org_atts = self.org_mapping_api.list_org_attributes(context)['org_attributes']
+               LOG.debug("The retrieved Irg Atts are:")
+               LOG.debug(org_atts)
+               for org_att in org_atts:
+                   if org_att['type'] == att:
+                       if org_att['value'] == val or org_att['value'] is None:
+                           try:
+                               self.org_mapping_api.check_attribute_can_be_issued(context, service_id=realm_id, org_attribute_id=org_att['id'])
+                               if valid_atts[att] is None:
+                                   valid_atts[att] = [val]
+                               else:
+                                   valid_atts[att].append(val)
+                           except exception.NotFoundException:
+                               pass
         return valid_atts
+
+def valid_Response(response):
+    resp = webob.Response(content_type='application/json')
+    resp.body = json.dumps(response)
+    return resp
         
 def inflate(data):
         decompress = zlib.decompressobj(
@@ -215,7 +235,3 @@ def inflate(data):
         inflated = decompress.decompress(data)
         inflated += decompress.flush()
         return inflated
-
-def factory():
-    return PermisValidator()
-
