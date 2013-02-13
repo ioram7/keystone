@@ -195,7 +195,6 @@ class FederatedAuthentication(object):
         token_api = token.controllers.Auth()
         unscoped_token = token_api.authenticate(context, auth={'passwordCredentials': {'username': user['name'], 'password': password}})
         return unscoped_token, [project_api.get_project(context, project_id=p)['project']  for p in projects]
-                    
 
 def load_protocol_module(protocol):
     ''' Dynamically load correct module for processing authentication
