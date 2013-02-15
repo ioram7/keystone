@@ -53,7 +53,7 @@ from keystone import catalog
 from keystone import identity
 from keystone import token
 from keystone.mapping import controllers
-from keystone.middleware.federated import directory
+from keystone.middleware.federated import directory, user_management
 
 import uuid
 import imp
@@ -111,11 +111,10 @@ class FederatedAuthentication(object):
         data = simplejson.loads(body)
        
         if 'idpResponse' in data:
-            username, validatedUserAttributes = self.validate(data, data['realm'])		
+            username, expires, validatedUserAttributes = self.validate(data, data['realm'])		
             identity_api = identity.controllers.UserV3()
-            tempPass = uuid.uuid4().hex
-            user_ref = {'name': username, 'password': tempPass} 
-            user = identity_api.create_user({'is_admin': True}, user=user_ref)['user']
+            user_manager = user_management.UserManager()
+            user, tempPass = user_manager.manage(username, expires)
             resp = {}
             resp['unscopedToken'], resp['tenants'] = self.mapAttributes(data, validatedUserAttributes, user, tempPass)
             LOG.debug(resp)
@@ -133,14 +132,13 @@ class FederatedAuthentication(object):
         catalog_api = catalog.controllers.ServiceV3()
         endpoint_api = catalog.controllers.EndpointV3()
         context = {'is_admin': True}
-        service = catalog_api.get_service(context=context, service_id=realm['service_id'])['service']
+        service = catalog_api.get_service(context=context, service_id=realm['id'])['service']
         protocol = service['type'].split('.')[1]
         processing_module = load_protocol_module(protocol)
         context['query_string'] = {}
         context['query_string']['service_id'] = service['id']
         endpoints = endpoint_api.list_endpoints(context)['endpoints']
         endpoint = None
-        print endpoints
         if not len(endpoints) < 1:
             for e in endpoints:
                 if e['interface'] == 'public':
@@ -154,7 +152,7 @@ class FederatedAuthentication(object):
         ''' Get the validated attributes '''
         catalog_api = catalog.controllers.ServiceV3()
         context = {'is_admin': True}
-        service = catalog_api.get_service(context=context, service_id=realm['service_id'])['service']
+        service = catalog_api.get_service(context=context, service_id=realm['id'])['service']
         type = service["type"].split('.')[1]
         processing_module = load_protocol_module(type)
         cred_validator = processing_module.CredentialValidator()
@@ -164,10 +162,12 @@ class FederatedAuthentication(object):
         mapper = controllers.AttributeMappingController()
         identity_api = identity.controllers.UserV3()
         legacy_identity_api = identity.controllers.User()
+        role_api = identity.controllers.RoleV3()
         project_api = identity.controllers.ProjectV3()
         context = {'is_admin': True}
         toMap = mapper.map(context, attributes=attributes)['attribute_mappings']
         user_id = user['id']
+        user.pop("expires")
         roles = []
         projects = []
         domains = []
@@ -180,26 +180,24 @@ class FederatedAuthentication(object):
                 domains.append(k)
         for d in domains:
             for p in projects:
-                identity_api.add_user_to_project(context, user_id=user_id, project_id=p)
                 for r in roles:
                     identity_api.add_role_to_user(context, user_id=user_id, project_id=p, role_id=r)
         if len(domains) == 0:
             for p in projects:
-                user['tenantId'] = p
-                print('\n\n\n\n\n')
-                print legacy_identity_api.update_user_tenant(context, user_id=user_id, user=user)
+                user["tenantId"] = p
+                legacy_identity_api.update_user_tenant(context, user['id'], user)
                 for r in roles:
-                    identity_api.add_role_to_user(context, user_id=user_id, project_id=p, role_id=r)
+                    LOG.debug("Adding role "+r+" to user "+user['name']+" on project "+p)
+                    role_api.create_grant(context, user_id=user_id, project_id=p, role_id=r)
         LOG.debug(user)
         context['query_string'] = {}
         token_api = token.controllers.Auth()
         unscoped_token = token_api.authenticate(context, auth={'passwordCredentials': {'username': user['name'], 'password': password}})
-        return unscoped_token, [project_api.get_project(context, project_id=p)['project']  for p in projects]
+        return unscoped_token['access']['token']['id'], [project_api.get_project(context, project_id=p)['project']  for p in projects]
 
 def load_protocol_module(protocol):
     ''' Dynamically load correct module for processing authentication
         according to identity provider's protocol'''
-    print os.path.dirname(__file__)
     return imp.load_source(protocol, os.path.dirname(__file__)+'/'+protocol+".py")
         
 

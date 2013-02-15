@@ -104,10 +104,10 @@ class AttributeMappingController(controller.V3Controller):
         org_set["attributes"] = attributes
         os_set = self.mapping_api.get_os_attribute_set(
             context, mapping["os_attribute_set_id"])
-        attribute_mapping["os_attribute_set"] = org_set
-        attributes = self.mapping_api.list_attributes_in_os_set(
+        attribute_mapping["os_attribute_set"] = os_set
+        attributes2 = self.mapping_api.list_attributes_in_os_set(
             context, os_set["id"])
-        os_set["attributes"] = attributes
+        os_set["attributes"] = attributes2
         return attribute_mapping
 
     @controller.protected
@@ -199,7 +199,23 @@ class AttributeMappingController(controller.V3Controller):
                        if org_att['value'] == val or org_att['value'] is None:
                            if not org_att['id'] in att_ids:
                                att_ids.append(org_att['id'])
-        return {'attribute_mappings': {'role': 'member', '8a16d56d489a4a0a9d4b3b638a32b8be': 'project'}}
+        matched_sets = []
+        for a_id in att_ids:
+            set_ids = self.mapping_api.list_org_sets_containing_attribute(context, org_attribute_id=a_id)
+            for  s in set_ids:
+                all_atts = [ss['id'] for ss in self.mapping_api.list_attributes_in_org_set(context, org_attribute_set_id=s['id'])]
+                if (x in att_ids for x in all_atts):
+                    if not s['id'] in matched_sets:
+                        matched_sets.append(s['id'])
+        all_mappings = self.list_attribute_mappings(context)['attribute_mappings']
+        valid_mappings = {}
+        for m in matched_sets:
+            for am in all_mappings:
+                if am['org_attribute_set']['id'] == m:
+                    for y in am['os_attribute_set']['attributes']:
+                        valid_mappings.update(y)
+        return {'attribute_mappings': valid_mappings}
+
 class OrgMappingController(controller.V3Controller):
 
     # Sets

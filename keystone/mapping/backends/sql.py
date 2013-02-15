@@ -156,7 +156,7 @@ class Mapping(sql.Base, Driver):
             org_attribute_id=org_attribute_id)
         qs = list(query.all())
         session.flush()
-        return [self.get_org_attribute_set(q.id) for q in qs]
+        return [self.get_org_attribute_set(q.org_attribute_set_id) for q in qs]
 
     def check_attribute_in_org_set(self, org_attribute_set_id,
                                    attribute_id):

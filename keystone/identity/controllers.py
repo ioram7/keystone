@@ -456,7 +456,10 @@ class UserV3(controller.V3Controller):
         ref = self._assign_unique_id(self._normalize_dict(user))
         expires = user.get('expires', None)
         if expires is not None:
-            ref['expires'] = timeutils.parse_strtime(expires)
+            try:
+                ref['expires'] = timeutils.parse_strtime(expires)
+            except ValueError:
+                ref['expires'] = timeutils.parse_isotime(expires)
         ref = self.identity_api.create_user(context, ref['id'], ref)
         return {'user': ref}
 

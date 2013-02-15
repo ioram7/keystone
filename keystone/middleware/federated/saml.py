@@ -54,6 +54,7 @@ import logging
 import urlparse
 import sys
 import uuid
+from keystone import exception
 sys.path.insert(0, '../')
 import dm.xmlsec.binding as xmlsec
 xmlsec.initialize()
@@ -191,6 +192,8 @@ class CredentialValidator(object):
         resp = ElementTree(fromstring(resp))
         atts = {}
         names = []
+        for cond in resp.iter("{urn:oasis:names:tc:SAML:2.0:assertion}Conditions"):
+            expires = cond.attrib.get("NotOnOrAfter")
         for name in resp.iter("{urn:oasis:names:tc:SAML:2.0:assertion}NameID"):
             names.append(name.text)
         if(len(names) > 0):
@@ -200,7 +203,7 @@ class CredentialValidator(object):
 	        for value in att.iter("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue"):
 		    ats.append(value.text) 
 	        atts[att.get("Name")] = ats
-        return names[0], self.check_issuers(data, atts, realm_id)
+        return names[0], expires, self.check_issuers(data, atts, realm_id)
 
     def check_issuers(self, data, atts, realm_id):
         context = {"is_admin": True}
@@ -215,11 +218,11 @@ class CredentialValidator(object):
                        if org_att['value'] == val or org_att['value'] is None:
                            try:
                                self.org_mapping_api.check_attribute_can_be_issued(context, service_id=realm_id, org_attribute_id=org_att['id'])
-                               if valid_atts[att] is None:
-                                   valid_atts[att] = [val]
-                               else:
+                               try:
                                    valid_atts[att].append(val)
-                           except exception.NotFoundException:
+                               except:
+                                   valid_atts[att] = [val]
+                           except exception.NotFound:
                                pass
         return valid_atts
 
