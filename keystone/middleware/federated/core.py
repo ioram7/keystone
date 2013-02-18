@@ -167,7 +167,8 @@ class FederatedAuthentication(object):
         context = {'is_admin': True}
         toMap = mapper.map(context, attributes=attributes)['attribute_mappings']
         user_id = user['id']
-        user.pop("expires")
+        if user.get('expires') is not None:
+            user.pop("expires")
         roles = []
         projects = []
         domains = []

@@ -109,15 +109,24 @@ class CredentialValidator(object):
         for e in endpoints['endpoints']:
             if e['interface'] == 'admin':
                 endpoint = e['url']+'/tokens/'
+            if e['interface'] == 'public':
+                post_endpoint = e['url']+'/tokens'
         token_id = response['access']['token']['id']
         # TODO acquire admin token to retrieve token verification
-        header = {"X-Auth-Token": "4e863656a494467cb09c38caae3b253e"}
+        auth_req = {"auth":{}}
+        auth_req["auth"]["tenantName"] = "admin"
+        auth_req['auth']['passwordCredentials'] = {"username": "federated-server", "password": "KEYSTONE"}
+        auth_token = self.request(post_endpoint, data=auth_req, method="POST")
+        header = {"X-Auth-Token": auth_token['access']['token']['id']}
+        #header = {"X-Auth-Token": "ADMIN"}
+        print header
         validatedResponse = self.request(keystoneEndpoint=endpoint, data=token_id, method="GET", header=header)
         validatedAttributes = {}
-        validatedAttributes['role'] = []
         for r in validatedResponse['access']['user']['roles']:
-            validatedAttributes['role'].append(r['name'])
-        validatedAttributes['project'] = validatedResponse['access']['token']['tenant']['name']
+            if validatedAttributes.get('role') is None:
+                validatedAttributes['role'] = []
+        validatedAttributes['role'].append(r['name'])
+        validatedAttributes['project'] = [validatedResponse['access']['token']['tenant']['name']]
         username = validatedResponse['access']['user']['name']
         expires = validatedResponse['access']['token']['expires']
         return username, expires, self.check_issuers(validatedAttributes, realm_id)
@@ -146,13 +155,16 @@ class CredentialValidator(object):
                for org_att in org_atts:
                    if org_att['type'] == att:
                        if org_att['value'] == val or att['value'] is None:
+                           print org_att['id']
+                           print org_att
+                           print att+"  "+val
                            try:
                                self.org_mapping_api.check_attribute_can_be_issued(context, service_id=realm_id, org_attribute_id=org_att['id'])
-                               if valid_atts[att] is None:
+                               if valid_atts.get(att) is None:
                                    valid_atts[att] = [val]
                                else:
                                    valid_atts[att].append(val)
-                           except exception.NotFoundException:
+                           except exception.NotFound:
                                pass
         return valid_atts
 
