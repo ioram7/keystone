@@ -51,6 +51,7 @@ Created on 1 Feb 2013
 '''
 
 import logging
+import tempfile
 import urlparse
 import sys
 import uuid
@@ -68,7 +69,10 @@ import base64
 import webob.dec
 import webob.exc
 import json
+import re
 
+from keystone.common import cms
+from keystone import config
 from keystone import mapping
 from keystone import catalog
 from keystone import exception
@@ -107,20 +111,33 @@ class CredentialValidator(object):
         context['interface'] = 'adminurl'
         endpoints = catalog_api.list_endpoints(context)
         for e in endpoints['endpoints']:
+            creds = e["creds"]
             if e['interface'] == 'admin':
                 endpoint = e['url']+'/tokens/'
             if e['interface'] == 'public':
                 post_endpoint = e['url']+'/tokens'
         token_id = response['access']['token']['id']
         # TODO acquire admin token to retrieve token verification
-        auth_req = {"auth":{}}
-        auth_req["auth"]["tenantName"] = "admin"
-        auth_req['auth']['passwordCredentials'] = {"username": "federated-server", "password": "KEYSTONE"}
-        auth_token = self.request(post_endpoint, data=auth_req, method="POST")
-        header = {"X-Auth-Token": auth_token['access']['token']['id']}
-        #header = {"X-Auth-Token": "ADMIN"}
-        print header
-        validatedResponse = self.request(keystoneEndpoint=endpoint, data=token_id, method="GET", header=header)
+        if not cms.is_ans1_token(token_id):
+            auth_req = {"auth":{}}
+            auth_req["auth"]["tenantName"] = "service"
+            auth_req['auth']['passwordCredentials'] = {"username": creds["user"], "password": creds["pass"]}
+            auth_token = self.request(post_endpoint, data=auth_req, method="POST")
+            header = {"X-Auth-Token": auth_token['access']['token']['id']}
+            validatedResponse = self.request(keystoneEndpoint=endpoint, data=token_id, method="GET", header=header)
+        else:
+            cert_file = tempfile.NamedTemporaryFile()
+            cert_file.write(self.format_certdata(creds["certdata"]))
+            cert_file.flush()
+            cacert_file = tempfile.NamedTemporaryFile()
+            cacert_file.write(self.format_certdata(creds["cacert"]))
+            cacert_file.flush()
+            data = json.loads(cms.cms_verify(cms.token_to_cms(token_id),cert_file.name,cacert_file.name))
+            cert_file.close()
+            cacert_file.close()
+            data['access']['token']['user'] = data['access']['user']
+            data['access']['token']['metadata'] = data['access']['metadata']
+            validatedResponse = data
         validatedAttributes = {}
         for r in validatedResponse['access']['user']['roles']:
             if validatedAttributes.get('role') is None:
@@ -130,6 +147,10 @@ class CredentialValidator(object):
         username = validatedResponse['access']['user']['name']
         expires = validatedResponse['access']['token']['expires']
         return username, expires, self.check_issuers(validatedAttributes, realm_id)
+
+    def format_certdata(self, data):
+        data = re.sub("(.{64})", "\\1\n", data, re.DOTALL)
+        return "-----BEGIN CERTIFICATE-----\n"+data+"\n-----END CERTIFICATE-----"
 
     ## Send a request that will be process by the V2 Keystone
     def request(self, keystoneEndpoint=None, data={}, method="GET", header={}):
@@ -147,14 +168,16 @@ class CredentialValidator(object):
     def check_issuers(self, atts, realm_id):
         context = {"is_admin": True}
         valid_atts = {}
+        LOG.debug("User's Attributes are: ")
+        LOG.debug(atts)
         for att in atts:
            for val in atts[att]:
                org_atts = self.org_mapping_api.list_org_attributes(context)['org_attributes']
-               LOG.debug("The retrieved Irg Atts are:")
+               LOG.debug("The retrieved Org Atts are:")
                LOG.debug(org_atts)
                for org_att in org_atts:
                    if org_att['type'] == att:
-                       if org_att['value'] == val or att['value'] is None:
+                       if org_att['value'] == val or org_att['value'] is None:
                            print org_att['id']
                            print org_att
                            print att+"  "+val

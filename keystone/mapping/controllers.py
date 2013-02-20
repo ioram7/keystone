@@ -200,11 +200,20 @@ class AttributeMappingController(controller.V3Controller):
                            if not org_att['id'] in att_ids:
                                att_ids.append(org_att['id'])
         matched_sets = []
+        LOG.debug("User's Org Atts are: ")
+        LOG.debug(att_ids)
         for a_id in att_ids:
             set_ids = self.mapping_api.list_org_sets_containing_attribute(context, org_attribute_id=a_id)
+            LOG.debug("The sets are for a_id are: ")
+            LOG.debug(set_ids)
             for  s in set_ids:
                 all_atts = [ss['id'] for ss in self.mapping_api.list_attributes_in_org_set(context, org_attribute_set_id=s['id'])]
-                if (x in att_ids for x in all_atts):
+                LOG.debug("The attributes in this set are: ")
+                LOG.debug(all_atts)
+                if set(all_atts) <= set(att_ids):
+                    LOG.debug(att_ids)
+                    LOG.debug(" CONTAINS ")
+                    LOG.debug(all_atts)
                     if not s['id'] in matched_sets:
                         matched_sets.append(s['id'])
         all_mappings = self.list_attribute_mappings(context)['attribute_mappings']
