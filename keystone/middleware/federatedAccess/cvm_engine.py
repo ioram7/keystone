@@ -59,9 +59,9 @@ import webob.exc
 import json as simplejson
 import json
 
-from keystone.identity.core import TenantController
-from keystone.identity.core import UserController
-from keystone.identity.core import RoleController
+from keystone.identity.controllers import Tenant as TenantController
+from keystone.identity.controllers import User as UserController
+from keystone.identity.controllers import Role as RoleController
 from keystone.exception import UserNotFound
 from keystone.exception import TenantNotFound
 from keystone.token.core import Manager
