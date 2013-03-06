@@ -183,11 +183,13 @@ class CredentialValidator(object):
                            print att+"  "+val
                            try:
                                self.org_mapping_api.check_attribute_can_be_issued(context, service_id=realm_id, org_attribute_id=org_att['id'])
+                               print att+"="+val+" can be issued"
                                if valid_atts.get(att) is None:
                                    valid_atts[att] = [val]
                                else:
                                    valid_atts[att].append(val)
                            except exception.NotFound:
+                               print att+"="+val+" cannot be issued by "+str(realm_id)
                                pass
         return valid_atts
 

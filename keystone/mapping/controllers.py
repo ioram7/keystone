@@ -223,6 +223,8 @@ class AttributeMappingController(controller.V3Controller):
                 if am['org_attribute_set']['id'] == m:
                     for y in am['os_attribute_set']['attributes']:
                         valid_mappings.update(y)
+        print "MATCHED VALID SETS!!!!!!!!!!!!!"
+        print valid_mappings
         return {'attribute_mappings': valid_mappings}
 
 class OrgMappingController(controller.V3Controller):
@@ -361,6 +363,32 @@ class OsMappingController(controller.V3Controller):
         return self.mapping_api.list_attributes_in_os_set(context,
                                                           set_id)
 
+    def add_role_to_os_set(self, context, os_attribute_set_id, attribute_id):
+        identity_api= identity.Manager()
+        identity_api.get_role(context, attribute_id)
+        set_id = os_attribute_set_id
+        return self.mapping_api.add_attribute_to_os_set(context,
+                                                        set_id,
+                                                        attribute_id,
+                                                        'role')
+
+    def add_project_to_os_set(self, context, os_attribute_set_id, attribute_id):
+        identity_api= identity.Manager()
+        identity_api.get_project(context, attribute_id)
+        set_id = os_attribute_set_id
+        return self.mapping_api.add_attribute_to_os_set(context,
+                                                        set_id,
+                                                        attribute_id,
+                                                        'project')
+
+    def add_domain_to_os_set(self, context, os_attribute_set_id, attribute_id):
+        identity_api= identity.Manager()
+        identity_api.get_domain(context, attribute_id)
+        set_id = os_attribute_set_id
+        return self.mapping_api.add_attribute_to_os_set(context,
+                                                        set_id,
+                                                        attribute_id,
+                                                        'domain')
     @controller.protected
     def add_attribute_to_os_set(self, context,
                                 os_attribute_set_id, attribute_id):

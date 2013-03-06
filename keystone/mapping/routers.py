@@ -40,11 +40,30 @@ def append_v3_routers(mapper, routers):
                    controller=controllers.OsMappingController(),
                    action='list_attributes_in_os_set',
                    conditions=dict(method=['GET']))
+
+
+
+
     mapper.connect('/os_attribute_sets/{os_attribute_set_id}/'
-                   + 'attributes/{attribute_id}',
+                   + 'projects/{attribute_id}',
                    controller=controllers.OsMappingController(),
-                   action='add_attribute_to_os_set',
+                   action='add_project_to_os_set',
                    conditions=dict(method=['PUT']))
+
+    mapper.connect('/os_attribute_sets/{os_attribute_set_id}/'
+                   + 'roles/{attribute_id}',
+                   controller=controllers.OsMappingController(),
+                   action='add_role_to_os_set',
+                   conditions=dict(method=['PUT']))
+
+    mapper.connect('/os_attribute_sets/{os_attribute_set_id}/'
+                   + 'domains/{attribute_id}',
+                   controller=controllers.OsMappingController(),
+                   action='add_domain_to_os_set',
+                   conditions=dict(method=['PUT']))
+
+
+
     mapper.connect('/os_attribute_sets/{os_attribute_set_id}/'
                    + 'attributes/{attribute_id}',
                    controller=controllers.OsMappingController(),
