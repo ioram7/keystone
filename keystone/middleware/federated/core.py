@@ -119,7 +119,8 @@ class FederatedAuthentication(object):
             resp['unscopedToken'], resp['tenants'] = self.mapAttributes(data, validatedUserAttributes, user, tempPass)
             LOG.debug(resp)
             return valid_Response(resp)
-
+        elif 'idpNegotiation' in data:
+			return self.negotiate(data)
         else:
             if 'realm' in data:
                 realm_id = data['realm']
@@ -157,6 +158,16 @@ class FederatedAuthentication(object):
         processing_module = load_protocol_module(type)
         cred_validator = processing_module.CredentialValidator()
         return cred_validator.validate(data['idpResponse'], service['id'])
+
+    def negotiate(self, data):
+        ''' Process a negotiation between an Idp and client '''
+        catalog_api = catalog.controllers.ServiceV3()
+        context = {'is_admin': True}
+        service = catalog_api.get_service(context=context, service_id=realm['id'])['service']
+        type = service["type"].split('.')[1]
+        processing_module = load_protocol_module(type)
+        negotiation_processor = processing_module.Negotiator()
+        return negotiation_processor(data['idpNegotiation'])
 
     def mapAttributes(self, data, attributes, user, password):
         mapper = controllers.AttributeMappingController()
