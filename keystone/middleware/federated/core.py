@@ -177,39 +177,54 @@ class FederatedAuthentication(object):
     def mapAttributes(self, data, attributes, user, password):
         mapper = controllers.AttributeMappingController()
         identity_api = identity.controllers.UserV3()
-        legacy_identity_api = identity.controllers.User()
         role_api = identity.controllers.RoleV3()
         project_api = identity.controllers.ProjectV3()
+        domain_api = identity.controllers.DomainV3()
         context = {'is_admin': True}
+        context_q = {'is_admin': True, "query_string":{}}
         toMap = mapper.map(context, attributes=attributes)['attribute_mappings']
         user_id = user['id']
+        old_roles = []
+        old_projects = project_api.list_user_projects(context_q, user_id=user_id)
+        LOG.debug("OLD USER PROJECTS")
+        LOG.debug(old_projects)
         if user.get('expires') is not None:
             user.pop("expires")
-        roles = []
-        projects = []
-        domains = []
-        for k, v in toMap.iteritems():
-            if v == 'role':
-                roles.append(k)
-            if v == 'project':
-                projects.append(k)
-            if v == 'domain':
-                domains.append(k)
-        for d in domains:
-            for p in projects:
+        avail_projects = []
+        LOG.debug(toMap)
+        for i in toMap:
+            roles = []
+            projects = []
+            domains = []
+            for it in i:
+                for k, v in it.iteritems():
+                    if v == 'role':
+                        roles.append(k)
+                    if v == 'project':
+                        projects.append(k)
+                    if v == 'domain':
+                        domains.append(k)
+            for d in domains:
+                avail_projects.append({ "domain":d})
                 for r in roles:
-                    identity_api.add_role_to_user(context, user_id=user_id, project_id=p, role_id=r)
-        if len(domains) == 0:
+                    role_api.create_grant(context, user_id=user_id, role_id=r, domain_id=d)
             for p in projects:
-                user["tenantId"] = p
-                legacy_identity_api.update_user_tenant(context, user['id'], user)
+                avail_projects.append({"project":p})
                 for r in roles:
                     LOG.debug("Adding role "+r+" to user "+user['name']+" on project "+p)
                     role_api.create_grant(context, user_id=user_id, project_id=p, role_id=r)
         context['query_string'] = {}
         token_api = token.controllers.Auth()
         unscoped_token = token_api.authenticate(context, auth={'passwordCredentials': {'username': user['name'], 'password': password}})
-        return unscoped_token['access']['token']['id'], [project_api.get_project(context, project_id=p)['project']  for p in projects]
+        projectsToReturn = []
+        for proj in avail_projects:
+            temp_proj = {}
+	    if proj.get("project", None) is not None:
+                temp_proj["project"] = project_api.get_project(context, project_id=proj["project"])["project"]
+            if proj.get("domain", None) is not None:
+                temp_proj["domain"] = domain_api.get_domain(context, domain_id=proj["domain"])["domain"]
+            projectsToReturn.append(temp_proj)
+        return unscoped_token['access']['token']['id'], projectsToReturn
 
 def load_protocol_module(protocol):
     ''' Dynamically load correct module for processing authentication

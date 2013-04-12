@@ -206,12 +206,11 @@ class AttributeMappingController(controller.V3Controller):
                     if not s['id'] in matched_sets:
                         matched_sets.append(s['id'])
         all_mappings = self.list_attribute_mappings(context)['attribute_mappings']
-        valid_mappings = {}
+        valid_mappings = []
         for m in matched_sets:
             for am in all_mappings:
                 if am['org_attribute_set']['id'] == m:
-                    for y in am['os_attribute_set']['attributes']:
-                        valid_mappings.update(y)
+                    valid_mappings.append(am['os_attribute_set']['attributes'])
         return {'attribute_mappings': valid_mappings}
 
 class OrgMappingController(controller.V3Controller):

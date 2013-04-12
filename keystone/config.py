@@ -13,13 +13,13 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+"""Wrapper for keystone.common.config that configures itself on import."""
 
-import gettext
-import os
-import sys
+from keystone.common import config
 
-from keystone.common import logging
-from keystone.openstack.common import cfg
+
+config.configure()
+CONF = config.CONF
 
 
 gettext.install('keystone', unicode=1)
@@ -246,3 +246,14 @@ register_str('password', group='pam', default=None)
 #attribute mapping
 register_str('driver', group='mapping',
              default='keystone.mapping.backends.sql.Mapping')
+setup_logging = config.setup_logging
+register_str = config.register_str
+register_cli_str = config.register_cli_str
+register_list = config.register_list
+register_cli_list = config.register_cli_list
+register_bool = config.register_bool
+register_cli_bool = config.register_cli_bool
+register_int = config.register_int
+register_cli_int = config.register_cli_int
+setup_authentication = config.setup_authentication
+
