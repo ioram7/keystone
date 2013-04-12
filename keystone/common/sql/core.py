@@ -191,7 +191,7 @@ class Base(object):
 
             engine_config = {
                 'convert_unicode': True,
-                'echo': CONF.debug and CONF.verbose,
+                'echo': False,
                 'pool_recycle': CONF.sql.idle_timeout,
             }
 

@@ -243,6 +243,10 @@ class Auth(controller.V2Controller):
                                context, user_id, tenant_id))
 
         expiry = core.default_expire_time()
+	user_expiry = user_ref.get('expires', None)
+        if user_expiry is not None:
+            if (user_expiry - expiry).total_seconds() < 0:
+                expiry = user_expiry                
         auth_token_data = self._get_auth_token_data(user_ref,
                                                     tenant_ref,
                                                     metadata_ref,

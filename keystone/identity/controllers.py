@@ -170,7 +170,7 @@ class User(controller.V2Controller):
     def create_user(self, context, user):
         user = self._normalize_dict(user)
         self.assert_admin(context)
-
+        print user
         if not 'name' in user or not user['name']:
             msg = 'Name field is required and cannot be empty'
             raise exception.ValidationError(message=msg)
@@ -179,7 +179,9 @@ class User(controller.V2Controller):
         if (tenant_id is not None
                 and self.identity_api.get_tenant(context, tenant_id) is None):
             raise exception.TenantNotFound(tenant_id=tenant_id)
-        user_id = uuid.uuid4().hex
+        user_id = user.get('id', None)
+        if user_id is None:
+            user_id = uuid.uuid4().hex
         user_ref = user.copy()
         user_ref['id'] = user_id
         new_user_ref = self.identity_api.create_user(
@@ -454,6 +456,9 @@ class UserV3(controller.V3Controller):
     @controller.protected
     def create_user(self, context, user):
         ref = self._assign_unique_id(self._normalize_dict(user))
+        user_id = user.get('id', None)
+        if user_id is not None:
+            ref['id'] = user_id
         expires = user.get('expires', None)
         if expires is not None:
             try:

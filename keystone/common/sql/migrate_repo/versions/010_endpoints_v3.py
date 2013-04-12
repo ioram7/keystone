@@ -38,6 +38,7 @@ def upgrade(migrate_engine):
                    nullable=False),
         sql.Column('url', sql.Text(), nullable=False),
         sql.Column('extra', sql.Text()))
+    sql.Table('service', meta, autoload=True)
     new_table.create(migrate_engine, checkfirst=True)
 
 

@@ -52,6 +52,7 @@ Created on 30 Jan 2013
 from keystone import catalog
 from keystone import identity
 from keystone import token
+from keystone import exception
 from keystone.mapping import controllers
 from keystone.middleware.federated import directory, user_management
 
@@ -81,7 +82,7 @@ Supposing the request respect the following specification:
     
 '''
         
-
+TEMP_PASS = uuid.uuid4().hex
 class FederatedAuthentication(object):
     
     def __init__(self, app, conf):
@@ -90,7 +91,7 @@ class FederatedAuthentication(object):
         '''
         self.conf = conf
         self.app = app
-                
+        #TEMP_PASS = uuid.uuid4().hex        
         LOG.info('Starting federated middleware wrapper')
         LOG.info('Init FederatedAuthentication!')
         
@@ -116,7 +117,11 @@ class FederatedAuthentication(object):
             user_manager = user_management.UserManager()
             user, tempPass = user_manager.manage(username, expires)
             resp = {}
-            resp['unscopedToken'], resp['tenants'] = self.mapAttributes(data, validatedUserAttributes, user, tempPass)
+            try:
+                resp['unscopedToken'], resp['tenants'] = self.mapAttributes(data, validatedUserAttributes, user, tempPass)
+            except exception.Unauthorized:
+                user, tempPass = user_manager.manage(username, expires, updatePass=True)
+                resp['unscopedToken'], resp['tenants'] = self.mapAttributes(data, validatedUserAttributes, user, tempPass)
             LOG.debug(resp)
             return valid_Response(resp)
         elif 'idpNegotiation' in data:
@@ -201,7 +206,6 @@ class FederatedAuthentication(object):
                 for r in roles:
                     LOG.debug("Adding role "+r+" to user "+user['name']+" on project "+p)
                     role_api.create_grant(context, user_id=user_id, project_id=p, role_id=r)
-        LOG.debug(user)
         context['query_string'] = {}
         token_api = token.controllers.Auth()
         unscoped_token = token_api.authenticate(context, auth={'passwordCredentials': {'username': user['name'], 'password': password}})

@@ -117,7 +117,7 @@ def upgrade(migrate_engine):
             sql.ForeignKey('os_attribute_set.id'),
             nullable=False,
             primary_key=True),
-        sql.Column('type', sql.String(255), primary_key=True))
+        sql.Column('type', sql.String(50), primary_key=True))
 
     os_attribute_association.create(migrate_engine, checkfirst=True)
 
