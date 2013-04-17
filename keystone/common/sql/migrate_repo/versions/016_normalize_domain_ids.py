@@ -70,6 +70,7 @@ def upgrade_user_table_with_copy(meta, migrate_engine, session):
         sql.Column('id', sql.String(64), primary_key=True),
         sql.Column('name', sql.String(64), unique=True, nullable=False),
         sql.Column('extra', sql.Text()),
+        sql.Column('expires', sql.DateTime()),
         sql.Column('password', sql.String(128)),
         sql.Column('enabled', sql.Boolean, default=True))
     temp_user_table.create(migrate_engine, checkfirst=True)
@@ -83,6 +84,7 @@ def upgrade_user_table_with_copy(meta, migrate_engine, session):
                         {'id': user.id,
                          'name': user.name,
                          'extra': user.extra,
+                         'expires': user.expires,
                          'password': user.password,
                          'enabled': user.enabled})
 
@@ -101,6 +103,7 @@ def upgrade_user_table_with_copy(meta, migrate_engine, session):
         sql.Column('id', sql.String(64), primary_key=True),
         sql.Column('name', sql.String(64), nullable=False),
         sql.Column('extra', sql.Text()),
+        sql.Column('expires', sql.DateTime()),
         sql.Column("password", sql.String(128)),
         sql.Column("enabled", sql.Boolean, default=True),
         sql.Column('domain_id', sql.String(64), sql.ForeignKey('domain.id'),
@@ -112,15 +115,16 @@ def upgrade_user_table_with_copy(meta, migrate_engine, session):
     # up by deleting our temp table
     for user in session.query(temp_user_table):
         session.execute('insert into user (id, name, extra, '
-                        'password, enabled, domain_id) '
+                        'password, enabled, domain_id, expires) '
                         'values ( :id, :name, :extra, '
-                        ':password, :enabled, :domain_id);',
+                        ':password, :enabled, :domain_id, :expires);',
                         {'id': user.id,
                          'name': user.name,
                          'extra': user.extra,
                          'password': user.password,
                          'enabled': user.enabled,
-                         'domain_id': DEFAULT_DOMAIN_ID})
+                         'domain_id': DEFAULT_DOMAIN_ID,
+                         'expires': user.expires})
     _enable_foreign_constraints(session, migrate_engine)
     session.execute('drop table temp_user;')
 

@@ -390,7 +390,6 @@ class UserApi(common_ldap.EnabledEmuMixIn, common_ldap.BaseLdap, ApiShimMixin):
 
 
     model = models.User
-    print model
 
     def __init__(self, conf):
         super(UserApi, self).__init__(conf)
@@ -432,10 +431,7 @@ class UserApi(common_ldap.EnabledEmuMixIn, common_ldap.BaseLdap, ApiShimMixin):
         values = utils.hash_ldap_user_password(values)
         if self.enabled_mask:
             self.mask_enabled_attribute(values)
-        print "BEFORE SUPER"
-        print values
         values = super(UserApi, self).create(values)
-        print values
         tenant_id = values.get('tenant_id')
         if tenant_id is not None:
             self.project_api.add_user(values['tenant_id'], values['id'])

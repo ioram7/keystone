@@ -31,7 +31,7 @@ class UserManager(object):
             user = self.identity_api.create_user({'is_admin': True}, user=user_ref)['user']
             return user, tempPass
         except exception.Conflict:
-            users = self.identity_api.list_users({"is_admin": True, "query_string":{}})
+            users = self.identity_api.list_users({"is_admin": True, "query_string":{}, "path":""})
             for u in users["users"]:
                 if new_id == u["name"]:
                     user = u

@@ -41,11 +41,8 @@ DRIVERS = dict(
     identity_api=identity.Manager(),
     policy_api=policy.Manager(),
     token_api=token.Manager(),
-<<<<<<< HEAD
-    mapping_api=mapping.Manager())
-=======
+    mapping_api=mapping.Manager(),
     trust_api=trust.Manager())
->>>>>>> a75e1128f442c0436a3ef669a24c639f74df0f97
 
 
 @logging.fail_gracefully
@@ -94,11 +91,7 @@ def v3_app_factory(global_conf, **local_conf):
     conf.update(local_conf)
     mapper = routes.Mapper()
     v3routers = []
-<<<<<<< HEAD
-    for module in [catalog, identity, policy, mapping]:
-=======
-    for module in [auth, catalog, identity, policy]:
->>>>>>> a75e1128f442c0436a3ef669a24c639f74df0f97
+    for module in [auth, catalog, identity, policy, mapping]:
         module.routers.append_v3_routers(mapper, v3routers)
 
     if CONF.trust.enabled:

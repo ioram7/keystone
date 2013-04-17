@@ -115,8 +115,6 @@ class RequestIssuingService(object):
 
     def sign(self,doc, key):
         node = xmlsec.findNode(doc, xmlsec.dsig("Signature"))
-        if node == None:
-                print "Node was None"
         dsigCtx = xmlsec.DSigCtx()
         signKey = xmlsec.Key.load(key, xmlsec.KeyDataFormatPem, None)
         signKey.name = basename(key)
@@ -220,7 +218,6 @@ class CredentialValidator(object):
 	    for value in att.iter("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue"):
 	        ats.append(value.text) 
 	    atts[att.get("Name")] = ats
-        print atts;
 	if unique_attribute is not None and atts.get(unique_attribute, None) is not None:
             names = atts.get(unique_attribute)
         return names[0], expires, self.check_issuers(data, atts, realm_id)

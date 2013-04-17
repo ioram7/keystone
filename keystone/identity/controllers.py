@@ -593,7 +593,6 @@ class UserV3(controller.V3Controller):
     @controller.protected
     def create_user(self, context, user):
         ref = self._assign_unique_id(self._normalize_dict(user))
-<<<<<<< HEAD
         user_id = user.get('id', None)
         if user_id is not None:
             ref['id'] = user_id
@@ -603,9 +602,7 @@ class UserV3(controller.V3Controller):
                 ref['expires'] = timeutils.parse_strtime(expires)
             except ValueError:
                 ref['expires'] = timeutils.parse_isotime(expires)
-=======
         ref = self._normalize_domain_id(context, ref)
->>>>>>> a75e1128f442c0436a3ef669a24c639f74df0f97
         ref = self.identity_api.create_user(context, ref['id'], ref)
         return UserV3.wrap_member(context, ref)
 

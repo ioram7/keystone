@@ -394,3 +394,7 @@ def configure():
     for method_name in CONF.auth.methods:
         if method_name not in _DEFAULT_AUTH_METHODS:
             register_str(method_name, group='auth')
+
+    register_str('driver', group='mapping', default=None)
+    register_str('requestSigningKey', group='federated', default=None)
+    register_str('SPName', group='federated', default=None)
