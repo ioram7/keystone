@@ -1,5 +1,5 @@
 import functools
-from keystone.mapping import Driver
+from keystone.contrib.mapping import Driver
 from keystone.common import sql
 from keystone.identity.backends import sql as identity
 from keystone import exception

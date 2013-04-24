@@ -55,8 +55,8 @@ from keystone import token
 from keystone import auth
 from keystone import exception
 from keystone.common import config
-from keystone.mapping import controllers
-from keystone.middleware.federated import directory, user_management
+from keystone.contrib.mapping import controllers
+from keystone.contrib.federated.middleware import directory, user_management
 from keystone.openstack.common import jsonutils
 
 import uuid

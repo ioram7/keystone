@@ -27,7 +27,7 @@ from keystone import identity
 from keystone import policy
 from keystone import routers
 from keystone import token
-from keystone import mapping
+from keystone.contrib import mapping
 from keystone import trust
 
 

@@ -41,7 +41,7 @@ from keystone.openstack.common import timeutils
 from keystone import policy
 from keystone import token
 
-from keystone import mapping
+from keystone.contrib import mapping
 
 from keystone import trust
 

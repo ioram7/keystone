@@ -73,7 +73,7 @@ import re
 
 from keystone.common import cms
 from keystone import config
-from keystone import mapping
+from keystone.contrib import mapping
 from keystone import catalog
 from keystone import exception
 LOG = logging.getLogger(__name__)

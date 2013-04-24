@@ -14,6 +14,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from keystone.mapping.core import *
-from keystone.mapping import controllers
-from keystone.mapping import routers
+from keystone.contrib.mapping.core import *
+from keystone.contrib.mapping import controllers
+from keystone.contrib.mapping import routers

@@ -70,7 +70,7 @@ import webob.dec
 import webob.exc
 import json
 
-from keystone import mapping
+from keystone.contrib import mapping
 from keystone import catalog
 LOG = logging.getLogger(__name__)
 
