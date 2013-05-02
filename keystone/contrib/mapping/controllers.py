@@ -232,6 +232,7 @@ class AttributeMappingController(controller.V3Controller):
                     if not s['id'] in matched_sets:
                         matched_sets.append(s['id'])
         all_mappings = self.list_attribute_mappings(context)['attribute_mappings']
+
         valid_mappings = []
         for m in matched_sets:
             for am in all_mappings:
@@ -325,8 +326,8 @@ class OrgMappingController(controller.V3Controller):
         self.mapping_api.delete_org_attribute(context, att_id)
 
     def create_org_attribute(self, context, org_attribute):
-        if not is_authorised(context):
-            self.assert_admin(context)
+        if not context.get("is_admin"):
+            is_authorised(context)
         attribute_id = uuid.uuid4().hex
         attribute_ref = org_attribute.copy()
         attribute_ref['id'] = attribute_id
@@ -497,9 +498,10 @@ def is_authorised(context):
             return True
 
 def filter_by_user_role(context, mappings):
+    if context.get("is_admin", None):
+        return mappings
     new_mappings = []
     for mapping in mappings:
-        print "FILTERING"
         try:
             is_permitted(context, mapping)
             new_mappings.append(mapping)
@@ -556,7 +558,6 @@ def is_permitted(context, mapping):
     attributes = mapping_ref["os_attribute_set"]["attributes"]
     roles = get_user_roles(context)
     for r in roles:
-        print attributes
         for att in attributes:
             att_copy = att.copy()
             k, v = att_copy.popitem()

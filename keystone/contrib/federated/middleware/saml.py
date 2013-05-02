@@ -196,7 +196,13 @@ class CredentialValidator(object):
         return None
         
     def validate(self, data, realm_id):
-        idp_info = self.catalog_api.list_endpoints({'is_admin': True, 'query_string':{'service_id':realm_id, 'interface': 'public'}})
+        context = {}
+        context['is_admin'] = True
+        context['query_string'] = {}
+        context['query_string']['service_id'] = realm_id
+        context['interface'] = 'adminurl'
+        context['path'] = ""
+        idp_info = self.catalog_api.list_endpoints(context)
         unique_attribute = idp_info["endpoints"][0].get("identifier_attribute",None)
         resp = urlparse.parse_qsl(data)
         k, v = resp[0]
