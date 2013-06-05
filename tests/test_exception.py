@@ -16,8 +16,8 @@
 
 import uuid
 
-from keystone import config
 from keystone.common import wsgi
+from keystone import config
 from keystone import exception
 from keystone.openstack.common import jsonutils
 from keystone import test
@@ -54,7 +54,7 @@ class ExceptionTestCase(test.TestCase):
         user-facing.
 
         This test provides a custom message to bypass docstring parsing, which
-        should be tested seperately.
+        should be tested separately.
 
         """
         for cls in [x for x in exception.__dict__.values() if callable(x)]:
@@ -75,35 +75,42 @@ class ExceptionTestCase(test.TestCase):
         self.assertValidJsonRendering(e)
         self.assertIn(target, str(e))
 
+    def test_403_title(self):
+        e = exception.Forbidden()
+        resp = wsgi.render_exception(e)
+        j = jsonutils.loads(resp.body)
+        self.assertEqual('Forbidden', e.title)
+        self.assertEqual('Forbidden', j['error'].get('title'))
+
 
 class SecurityErrorTestCase(ExceptionTestCase):
     """Tests whether security-related info is exposed to the API user."""
     def test_unauthorized_exposure(self):
-        CONF.debug = False
+        self.opt(debug=False)
 
         risky_info = uuid.uuid4().hex
         e = exception.Unauthorized(message=risky_info)
         self.assertValidJsonRendering(e)
         self.assertNotIn(risky_info, str(e))
 
-    def test_unauthroized_exposure_in_debug(self):
-        CONF.debug = True
+    def test_unauthorized_exposure_in_debug(self):
+        self.opt(debug=True)
 
         risky_info = uuid.uuid4().hex
         e = exception.Unauthorized(message=risky_info)
         self.assertValidJsonRendering(e)
         self.assertIn(risky_info, str(e))
 
-    def test_foribdden_exposure(self):
-        CONF.debug = False
+    def test_forbidden_exposure(self):
+        self.opt(debug=False)
 
         risky_info = uuid.uuid4().hex
         e = exception.Forbidden(message=risky_info)
         self.assertValidJsonRendering(e)
         self.assertNotIn(risky_info, str(e))
 
-    def test_forbidden_exposure_in_Debug(self):
-        CONF.debug = True
+    def test_forbidden_exposure_in_debug(self):
+        self.opt(debug=True)
 
         risky_info = uuid.uuid4().hex
         e = exception.Forbidden(message=risky_info)
@@ -111,20 +118,21 @@ class SecurityErrorTestCase(ExceptionTestCase):
         self.assertIn(risky_info, str(e))
 
     def test_forbidden_action_exposure(self):
-        CONF.debug = False
+        self.opt(debug=False)
 
         risky_info = uuid.uuid4().hex
-
-        e = exception.ForbiddenAction(message=risky_info)
+        action = uuid.uuid4().hex
+        e = exception.ForbiddenAction(message=risky_info, action=action)
         self.assertValidJsonRendering(e)
         self.assertNotIn(risky_info, str(e))
+        self.assertIn(action, str(e))
 
         e = exception.ForbiddenAction(action=risky_info)
         self.assertValidJsonRendering(e)
         self.assertIn(risky_info, str(e))
 
     def test_forbidden_action_exposure_in_debug(self):
-        CONF.debug = True
+        self.opt(debug=True)
 
         risky_info = uuid.uuid4().hex
 
@@ -135,3 +143,12 @@ class SecurityErrorTestCase(ExceptionTestCase):
         e = exception.ForbiddenAction(action=risky_info)
         self.assertValidJsonRendering(e)
         self.assertIn(risky_info, str(e))
+
+    def test_unicode_message(self):
+        message = u'Comment \xe7a va'
+        e = exception.Error(message)
+        self.assertEqual(e.message, message)
+        try:
+            unicode(e)
+        except UnicodeEncodeError:
+            self.fail("unicode error message not supported")

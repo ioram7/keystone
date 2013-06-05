@@ -36,18 +36,22 @@ class Service(sql.ModelBase, sql.DictBase):
 
 class Endpoint(sql.ModelBase, sql.DictBase):
     __tablename__ = 'endpoint'
-    attributes = ['id', 'region', 'service_id']
+    attributes = ['id', 'interface', 'region', 'service_id', 'url',
+                  'legacy_endpoint_id']
     id = sql.Column(sql.String(64), primary_key=True)
+    legacy_endpoint_id = sql.Column(sql.String(64))
+    interface = sql.Column(sql.String(8), primary_key=True)
     region = sql.Column('region', sql.String(255))
     service_id = sql.Column(sql.String(64),
                             sql.ForeignKey('service.id'),
                             nullable=False)
+    url = sql.Column(sql.Text())
     extra = sql.Column(sql.JsonBlob())
 
 
 class Catalog(sql.Base, catalog.Driver):
-    def db_sync(self):
-        migration.db_sync()
+    def db_sync(self, version=None):
+        migration.db_sync(version=version)
 
     # Services
     def list_services(self):
@@ -56,10 +60,10 @@ class Catalog(sql.Base, catalog.Driver):
         return [s.to_dict() for s in list(services)]
 
     def _get_service(self, session, service_id):
-        try:
-            return session.query(Service).filter_by(id=service_id).one()
-        except sql.NotFound:
+        ref = session.query(Service).get(service_id)
+        if not ref:
             raise exception.ServiceNotFound(service_id=service_id)
+        return ref
 
     def get_service(self, service_id):
         session = self.get_session()
@@ -88,7 +92,9 @@ class Catalog(sql.Base, catalog.Driver):
             old_dict = ref.to_dict()
             old_dict.update(service_ref)
             new_service = Service.from_dict(old_dict)
-            ref.type = new_service.type
+            for attr in Service.attributes:
+                if attr != 'id':
+                    setattr(ref, attr, getattr(new_service, attr))
             ref.extra = new_service.extra
             session.flush()
         return ref.to_dict()
@@ -106,8 +112,8 @@ class Catalog(sql.Base, catalog.Driver):
     def delete_endpoint(self, endpoint_id):
         session = self.get_session()
         with session.begin():
-            if not session.query(Endpoint).filter_by(id=endpoint_id).delete():
-                raise exception.EndpointNotFound(endpoint_id=endpoint_id)
+            ref = self._get_endpoint(session, endpoint_id)
+            session.delete(ref)
             session.flush()
 
     def _get_endpoint(self, session, endpoint_id):
@@ -132,8 +138,9 @@ class Catalog(sql.Base, catalog.Driver):
             old_dict = ref.to_dict()
             old_dict.update(endpoint_ref)
             new_endpoint = Endpoint.from_dict(old_dict)
-            ref.service_id = new_endpoint.service_id
-            ref.region = new_endpoint.region
+            for attr in Endpoint.attributes:
+                if attr != 'id':
+                    setattr(ref, attr, getattr(new_endpoint, attr))
             ref.extra = new_endpoint.extra
             session.flush()
         return ref.to_dict()
@@ -142,25 +149,58 @@ class Catalog(sql.Base, catalog.Driver):
         d = dict(CONF.iteritems())
         d.update({'tenant_id': tenant_id,
                   'user_id': user_id})
+
         catalog = {}
+        services = {}
+        for endpoint in self.list_endpoints():
+            # look up the service
+            services.setdefault(
+                endpoint['service_id'],
+                self.get_service(endpoint['service_id']))
+            service = services[endpoint['service_id']]
 
-        endpoints = self.list_endpoints()
-        for ep in endpoints:
-            service = self.get_service(ep['service_id'])
-            srv_type = service['type']
-            srv_name = service['name']
-            region = ep['region']
+            # add the endpoint to the catalog if it's not already there
+            catalog.setdefault(endpoint['region'], {})
+            catalog[endpoint['region']].setdefault(
+                service['type'], {
+                    'id': endpoint['id'],
+                    'name': service['name'],
+                    'publicURL': '',  # this may be overridden, but must exist
+                })
 
-            if region not in catalog:
-                catalog[region] = {}
+            # add the interface's url
+            url = core.format_url(endpoint.get('url'), d)
+            interface_url = '%sURL' % endpoint['interface']
+            catalog[endpoint['region']][service['type']][interface_url] = url
 
-            catalog[region][srv_type] = {}
+        return catalog
 
-            srv_type = catalog[region][srv_type]
-            srv_type['id'] = ep['id']
-            srv_type['name'] = srv_name
-            srv_type['publicURL'] = core.format_url(ep.get('publicurl', ''), d)
-            srv_type['internalURL'] = core.format_url(ep.get('internalurl'), d)
-            srv_type['adminURL'] = core.format_url(ep.get('adminurl'), d)
+    def get_v3_catalog(self, user_id, tenant_id, metadata=None):
+        d = dict(CONF.iteritems())
+        d.update({'tenant_id': tenant_id,
+                  'user_id': user_id})
+
+        services = {}
+        for endpoint in self.list_endpoints():
+            # look up the service
+            service_id = endpoint['service_id']
+            services.setdefault(
+                service_id,
+                self.get_service(service_id))
+            service = services[service_id]
+            del endpoint['service_id']
+            endpoint['url'] = core.format_url(endpoint['url'], d)
+            if 'endpoints' in services[service_id]:
+                services[service_id]['endpoints'].append(endpoint)
+            else:
+                services[service_id]['endpoints'] = [endpoint]
+
+        catalog = []
+        for service_id, service in services.iteritems():
+            formatted_service = {}
+            formatted_service['id'] = service['id']
+            formatted_service['type'] = service['type']
+            formatted_service['endpoints'] = service['endpoints']
+            catalog.append(formatted_service)
 
         return catalog

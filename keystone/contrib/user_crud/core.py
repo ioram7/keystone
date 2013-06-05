@@ -17,22 +17,16 @@
 import copy
 import uuid
 
-from keystone import exception
 from keystone.common import logging
 from keystone.common import wsgi
+from keystone import exception
 from keystone import identity
-from keystone import token
 
 
 LOG = logging.getLogger(__name__)
 
 
-class UserController(wsgi.Application):
-    def __init__(self):
-        self.identity_api = identity.Manager()
-        self.token_api = token.Manager()
-        self.user_controller = identity.controllers.User()
-
+class UserController(identity.controllers.User):
     def set_user_password(self, context, user_id, user):
         token_id = context.get('token_id')
         original_password = user.get('original_password')
@@ -62,9 +56,9 @@ class UserController(wsgi.Application):
 
         admin_context = copy.copy(context)
         admin_context['is_admin'] = True
-        self.user_controller.set_user_password(admin_context,
-                                               user_id,
-                                               update_dict)
+        super(UserController, self).set_user_password(admin_context,
+                                                      user_id,
+                                                      update_dict)
 
         token_id = uuid.uuid4().hex
         new_token_ref = copy.copy(token_ref)
@@ -76,11 +70,7 @@ class UserController(wsgi.Application):
 
 
 class CrudExtension(wsgi.ExtensionRouter):
-    """
-
-    Provides a subset of CRUD operations for internal data types.
-
-    """
+    """Provides a subset of CRUD operations for internal data types."""
 
     def add_routes(self, mapper):
         user_controller = UserController()

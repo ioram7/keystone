@@ -33,9 +33,15 @@ def check_length(property_name, value, min_length=1, max_length=64):
 
 def check_type(property_name, value, expected_type, display_expected_type):
     if not isinstance(value, expected_type):
-        msg = _("%(property_name)s is not a"
+        msg = _("%(property_name)s is not a "
                 "%(display_expected_type)s") % locals()
         raise exception.ValidationError(msg)
+
+
+def check_enabled(property_name, enabled):
+    # Allow int and it's subclass bool
+    check_type('%s enabled' % property_name, enabled, int, 'boolean')
+    return bool(enabled)
 
 
 def check_name(property_name, name):
@@ -49,9 +55,17 @@ def domain_name(name):
     return check_name('Domain', name)
 
 
-def tenant_name(name):
-    return check_name('Tenant', name)
+def project_name(name):
+    return check_name('Project', name)
 
 
 def user_name(name):
     return check_name('User', name)
+
+
+def user_enabled(enabled):
+    return check_enabled('User', enabled)
+
+
+def group_name(name):
+    return check_name('Group', name)

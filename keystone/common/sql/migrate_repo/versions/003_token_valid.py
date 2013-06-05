@@ -14,27 +14,25 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-
-from migrate import *
-from sqlalchemy import *
-
-
-from keystone.common import sql
+import sqlalchemy as sql
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine; bind
 
-    meta = MetaData()
+    meta = sql.MetaData()
     meta.bind = migrate_engine
-    dialect = migrate_engine.url.get_dialect().name
-    token = Table('token', meta, autoload=True)
-    valid = Column("valid", Boolean(), ColumnDefault(True), nullable=False)
-    token.create_column(valid)
+    token = sql.Table('token', meta, autoload=True)
+    # creating the column immediately with nullable=False fails with
+    # PostgreSQL (LP 1068181), so do it in two steps instead
+    valid = sql.Column(
+        'valid', sql.Boolean(), sql.ColumnDefault(True), nullable=True)
+    valid.create(token, populate_default=True)
+    valid.alter(type=sql.Boolean(), default=True, nullable=False)
 
 
 def downgrade(migrate_engine):
-    meta = MetaData()
+    meta = sql.MetaData()
     meta.bind = migrate_engine
-    token = Table('token', meta, autoload=True)
+    token = sql.Table('token', meta, autoload=True)
     token.drop_column('valid')

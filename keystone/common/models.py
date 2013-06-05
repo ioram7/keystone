@@ -42,6 +42,7 @@ class Token(Model):
         user
         tenant
         metadata
+        trust_id
     """
 
     required_keys = ('id', 'expires')
@@ -78,7 +79,7 @@ class Endpoint(Model):
     """
 
     required_keys = ('id', 'region', 'service_id')
-    optional_keys = ('interalurl', 'publicurl', 'adminurl')
+    optional_keys = ('internalurl', 'publicurl', 'adminurl')
 
 
 class User(Model):
@@ -87,6 +88,7 @@ class User(Model):
     Required keys:
         id
         name
+        domain_id
 
     Optional keys:
         password
@@ -95,16 +97,35 @@ class User(Model):
         enabled (bool, default True)
     """
 
-    required_keys = ('id', 'name')
+    required_keys = ('id', 'name', 'domain_id')
     optional_keys = ('password', 'description', 'email', 'enabled')
 
 
-class Tenant(Model):
-    """Tenant object.
+class Group(Model):
+    """Group object.
 
     Required keys:
         id
         name
+        domain_id
+
+    Optional keys:
+
+        description
+
+    """
+
+    required_keys = ('id', 'name', 'domain_id')
+    optional_keys = ('description',)
+
+
+class Project(Model):
+    """Project object.
+
+    Required keys:
+        id
+        name
+        domain_id
 
     Optional Keys:
         description
@@ -112,7 +133,7 @@ class Tenant(Model):
 
     """
 
-    required_keys = ('id', 'name')
+    required_keys = ('id', 'name', 'domain_id')
     optional_keys = ('description', 'enabled')
 
 
@@ -127,3 +148,35 @@ class Role(Model):
 
     required_keys = ('id', 'name')
     optional_keys = tuple()
+
+
+class Trust(Model):
+    """Trust object.
+
+    Required keys:
+        id
+        trustor_user_id
+        trustee_user_id
+        project_id
+    """
+
+    required_keys = ('id', 'trustor_user_id', 'trustee_user_id', 'project_id')
+    optional_keys = tuple('expires_at')
+
+
+class Domain(Model):
+    """Domain object.
+
+    Required keys:
+        id
+        name
+
+    Optional keys:
+
+        description
+        enabled (bool, default True)
+
+    """
+
+    required_keys = ('id', 'name')
+    optional_keys = ('description', 'enabled')

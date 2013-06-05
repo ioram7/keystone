@@ -16,23 +16,25 @@
 
 import uuid
 
-from keystone.common import sql
 from keystone import catalog
+from keystone.common import sql
 from keystone import config
 from keystone import exception
 from keystone import identity
 from keystone import policy
 from keystone import test
 from keystone import token
+from keystone import trust
 
 import default_fixtures
 import test_backend
 
-
 CONF = config.CONF
+DEFAULT_DOMAIN_ID = CONF.identity.default_domain_id
 
 
-class SqlTests(test.TestCase):
+class SqlTests(test.TestCase, sql.Base):
+
     def setUp(self):
         super(SqlTests, self).setUp()
         self.config([test.etcdir('keystone.conf.sample'),
@@ -43,13 +45,20 @@ class SqlTests(test.TestCase):
         self.catalog_man = catalog.Manager()
         self.identity_man = identity.Manager()
         self.token_man = token.Manager()
+        self.trust_man = trust.Manager()
         self.policy_man = policy.Manager()
+
+        # create tables and keep an engine reference for cleanup.
+        # this must be done after the models are loaded by the managers.
+        self.engine = self.get_engine()
+        sql.ModelBase.metadata.create_all(bind=self.engine)
 
         # create shortcut references to each driver
         self.catalog_api = self.catalog_man.driver
         self.identity_api = self.identity_man.driver
         self.token_api = self.token_man.driver
         self.policy_api = self.policy_man.driver
+        self.trust_api = self.trust_man.driver
 
         # populate the engine with tables & fixtures
         self.load_fixtures(default_fixtures)
@@ -57,29 +66,38 @@ class SqlTests(test.TestCase):
         self.user_foo['enabled'] = True
 
     def tearDown(self):
+        sql.ModelBase.metadata.drop_all(bind=self.engine)
+        self.engine.dispose()
         sql.set_global_engine(None)
         super(SqlTests, self).tearDown()
 
 
 class SqlIdentity(SqlTests, test_backend.IdentityTests):
-    def test_delete_user_with_tenant_association(self):
+    def test_password_hashed(self):
+        session = self.identity_api.get_session()
+        user_ref = self.identity_api._get_user(session, self.user_foo['id'])
+        self.assertNotEqual(user_ref['password'], self.user_foo['password'])
+
+    def test_delete_user_with_project_association(self):
         user = {'id': uuid.uuid4().hex,
                 'name': uuid.uuid4().hex,
+                'domain_id': DEFAULT_DOMAIN_ID,
                 'password': uuid.uuid4().hex}
-        self.identity_api.create_user(user['id'], user)
-        self.identity_api.add_user_to_tenant(self.tenant_bar['id'],
-                                             user['id'])
+        self.identity_man.create_user({}, user['id'], user)
+        self.identity_api.add_user_to_project(self.tenant_bar['id'],
+                                              user['id'])
         self.identity_api.delete_user(user['id'])
         self.assertRaises(exception.UserNotFound,
-                          self.identity_api.get_tenants_for_user,
+                          self.identity_api.get_projects_for_user,
                           user['id'])
 
     def test_create_null_user_name(self):
         user = {'id': uuid.uuid4().hex,
                 'name': None,
+                'domain_id': DEFAULT_DOMAIN_ID,
                 'password': uuid.uuid4().hex}
         self.assertRaises(exception.ValidationError,
-                          self.identity_api.create_user,
+                          self.identity_man.create_user, {},
                           user['id'],
                           user)
         self.assertRaises(exception.UserNotFound,
@@ -87,21 +105,24 @@ class SqlIdentity(SqlTests, test_backend.IdentityTests):
                           user['id'])
         self.assertRaises(exception.UserNotFound,
                           self.identity_api.get_user_by_name,
-                          user['name'])
+                          user['name'],
+                          DEFAULT_DOMAIN_ID)
 
-    def test_create_null_tenant_name(self):
+    def test_create_null_project_name(self):
         tenant = {'id': uuid.uuid4().hex,
-                  'name': None}
+                  'name': None,
+                  'domain_id': DEFAULT_DOMAIN_ID}
         self.assertRaises(exception.ValidationError,
-                          self.identity_api.create_tenant,
+                          self.identity_man.create_project, {},
                           tenant['id'],
                           tenant)
-        self.assertRaises(exception.TenantNotFound,
-                          self.identity_api.get_tenant,
+        self.assertRaises(exception.ProjectNotFound,
+                          self.identity_api.get_project,
                           tenant['id'])
-        self.assertRaises(exception.TenantNotFound,
-                          self.identity_api.get_tenant_by_name,
-                          tenant['name'])
+        self.assertRaises(exception.ProjectNotFound,
+                          self.identity_api.get_project_by_name,
+                          tenant['name'],
+                          DEFAULT_DOMAIN_ID)
 
     def test_create_null_role_name(self):
         role = {'id': uuid.uuid4().hex,
@@ -114,22 +135,24 @@ class SqlIdentity(SqlTests, test_backend.IdentityTests):
                           self.identity_api.get_role,
                           role['id'])
 
-    def test_delete_tenant_with_user_association(self):
+    def test_delete_project_with_user_association(self):
         user = {'id': 'fake',
                 'name': 'fakeuser',
+                'domain_id': DEFAULT_DOMAIN_ID,
                 'password': 'passwd'}
-        self.identity_api.create_user('fake', user)
-        self.identity_api.add_user_to_tenant(self.tenant_bar['id'],
-                                             user['id'])
-        self.identity_api.delete_tenant(self.tenant_bar['id'])
-        tenants = self.identity_api.get_tenants_for_user(user['id'])
+        self.identity_man.create_user({}, 'fake', user)
+        self.identity_api.add_user_to_project(self.tenant_bar['id'],
+                                              user['id'])
+        self.identity_api.delete_project(self.tenant_bar['id'])
+        tenants = self.identity_api.get_projects_for_user(user['id'])
         self.assertEquals(tenants, [])
 
     def test_delete_user_with_metadata(self):
         user = {'id': 'fake',
                 'name': 'fakeuser',
+                'domain_id': DEFAULT_DOMAIN_ID,
                 'password': 'passwd'}
-        self.identity_api.create_user('fake', user)
+        self.identity_man.create_user({}, 'fake', user)
         self.identity_api.create_metadata(user['id'],
                                           self.tenant_bar['id'],
                                           {'extra': 'extra'})
@@ -139,21 +162,22 @@ class SqlIdentity(SqlTests, test_backend.IdentityTests):
                           user['id'],
                           self.tenant_bar['id'])
 
-    def test_delete_tenant_with_metadata(self):
+    def test_delete_project_with_metadata(self):
         user = {'id': 'fake',
                 'name': 'fakeuser',
+                'domain_id': DEFAULT_DOMAIN_ID,
                 'password': 'passwd'}
-        self.identity_api.create_user('fake', user)
+        self.identity_man.create_user({}, 'fake', user)
         self.identity_api.create_metadata(user['id'],
                                           self.tenant_bar['id'],
                                           {'extra': 'extra'})
-        self.identity_api.delete_tenant(self.tenant_bar['id'])
+        self.identity_api.delete_project(self.tenant_bar['id'])
         self.assertRaises(exception.MetadataNotFound,
                           self.identity_api.get_metadata,
                           user['id'],
                           self.tenant_bar['id'])
 
-    def test_update_tenant_returns_extra(self):
+    def test_update_project_returns_extra(self):
         """This tests for backwards-compatibility with an essex/folsom bug.
 
         Non-indexed attributes were returned in an 'extra' attribute, instead
@@ -169,13 +193,14 @@ class SqlIdentity(SqlTests, test_backend.IdentityTests):
         tenant = {
             'id': tenant_id,
             'name': uuid.uuid4().hex,
+            'domain_id': DEFAULT_DOMAIN_ID,
             arbitrary_key: arbitrary_value}
-        ref = self.identity_api.create_tenant(tenant_id, tenant)
+        ref = self.identity_man.create_project({}, tenant_id, tenant)
         self.assertEqual(arbitrary_value, ref[arbitrary_key])
         self.assertIsNone(ref.get('extra'))
 
         tenant['name'] = uuid.uuid4().hex
-        ref = self.identity_api.update_tenant(tenant_id, tenant)
+        ref = self.identity_api.update_project(tenant_id, tenant)
         self.assertEqual(arbitrary_value, ref[arbitrary_key])
         self.assertEqual(arbitrary_value, ref['extra'][arbitrary_key])
 
@@ -195,9 +220,10 @@ class SqlIdentity(SqlTests, test_backend.IdentityTests):
         user = {
             'id': user_id,
             'name': uuid.uuid4().hex,
+            'domain_id': DEFAULT_DOMAIN_ID,
             'password': uuid.uuid4().hex,
             arbitrary_key: arbitrary_value}
-        ref = self.identity_api.create_user(user_id, user)
+        ref = self.identity_man.create_user({}, user_id, user)
         self.assertEqual(arbitrary_value, ref[arbitrary_key])
         self.assertIsNone(ref.get('password'))
         self.assertIsNone(ref.get('extra'))
@@ -211,72 +237,82 @@ class SqlIdentity(SqlTests, test_backend.IdentityTests):
         self.assertEqual(arbitrary_value, ref['extra'][arbitrary_key])
 
 
+class SqlTrust(SqlTests, test_backend.TrustTests):
+    pass
+
+
 class SqlToken(SqlTests, test_backend.TokenTests):
     pass
 
 
 class SqlCatalog(SqlTests, test_backend.CatalogTests):
     def test_malformed_catalog_throws_error(self):
-        self.catalog_api.create_service('a', {"id": "a", "desc": "a1",
-                                        "name": "b"})
-        badurl = "http://192.168.1.104:$(compute_port)s/v2/$(tenant)s"
-        self.catalog_api.create_endpoint('b', {"id": "b", "region": "b1",
-                                         "service_id": "a", "adminurl": badurl,
-                                         "internalurl": badurl,
-                                         "publicurl": badurl})
-        with self.assertRaises(exception.MalformedEndpoint):
-            self.catalog_api.get_catalog('fake-user', 'fake-tenant')
-
-    def test_get_catalog_without_endpoint(self):
-        new_service = {
+        service = {
             'id': uuid.uuid4().hex,
             'type': uuid.uuid4().hex,
             'name': uuid.uuid4().hex,
             'description': uuid.uuid4().hex,
         }
-        self.catalog_api.create_service(
-            new_service['id'],
-            new_service.copy())
-        service_id = new_service['id']
+        self.catalog_api.create_service(service['id'], service.copy())
 
-        new_endpoint = {
+        malformed_url = "http://192.168.1.104:$(compute_port)s/v2/$(tenant)s"
+        endpoint = {
             'id': uuid.uuid4().hex,
             'region': uuid.uuid4().hex,
-            'service_id': service_id,
+            'service_id': service['id'],
+            'interface': 'public',
+            'url': malformed_url,
         }
+        self.catalog_api.create_endpoint(endpoint['id'], endpoint.copy())
 
-        self.catalog_api.create_endpoint(
-            new_endpoint['id'],
-            new_endpoint.copy())
+        with self.assertRaises(exception.MalformedEndpoint):
+            self.catalog_api.get_catalog('fake-user', 'fake-tenant')
+
+    def test_get_catalog_with_empty_public_url(self):
+        service = {
+            'id': uuid.uuid4().hex,
+            'type': uuid.uuid4().hex,
+            'name': uuid.uuid4().hex,
+            'description': uuid.uuid4().hex,
+        }
+        self.catalog_api.create_service(service['id'], service.copy())
+
+        endpoint = {
+            'id': uuid.uuid4().hex,
+            'region': uuid.uuid4().hex,
+            'interface': 'public',
+            'url': '',
+            'service_id': service['id'],
+        }
+        self.catalog_api.create_endpoint(endpoint['id'], endpoint.copy())
 
         catalog = self.catalog_api.get_catalog('user', 'tenant')
+        catalog_endpoint = catalog[endpoint['region']][service['type']]
+        self.assertEqual(catalog_endpoint['name'], service['name'])
+        self.assertEqual(catalog_endpoint['id'], endpoint['id'])
+        self.assertEqual(catalog_endpoint['publicURL'], '')
+        self.assertIsNone(catalog_endpoint.get('adminURL'))
+        self.assertIsNone(catalog_endpoint.get('internalURL'))
 
-        service_type = new_service['type']
-        region = new_endpoint['region']
+    def test_create_endpoint_400(self):
+        service = {
+            'id': uuid.uuid4().hex,
+            'type': uuid.uuid4().hex,
+            'name': uuid.uuid4().hex,
+            'description': uuid.uuid4().hex,
+        }
+        self.catalog_api.create_service(service['id'], service.copy())
 
-        self.assertEqual(catalog[region][service_type]['name'],
-                         new_service['name'])
-        self.assertEqual(catalog[region][service_type]['id'],
-                         new_endpoint['id'])
-        self.assertEqual(catalog[region][service_type]['publicURL'],
-                         "")
-        self.assertEqual(catalog[region][service_type]['adminURL'],
-                         None)
-        self.assertEqual(catalog[region][service_type]['internalURL'],
-                         None)
+        endpoint = {
+            'id': uuid.uuid4().hex,
+            'region': "0" * 256,
+            'service_id': service['id'],
+            'interface': 'public',
+            'url': uuid.uuid4().hex,
+        }
 
-    def test_delete_service_with_endpoints(self):
-        self.catalog_api.create_service('c', {"id": "c", "desc": "a1",
-                                        "name": "d"})
-        self.catalog_api.create_endpoint('d', {"id": "d", "region": None,
-                                         "service_id": "c", "adminurl": None,
-                                         "internalurl": None,
-                                         "publicurl": None})
-        self.catalog_api.delete_service("c")
-        self.assertRaises(exception.ServiceNotFound,
-                          self.catalog_man.delete_service, {}, "c")
-        self.assertRaises(exception.EndpointNotFound,
-                          self.catalog_man.delete_endpoint, {}, "d")
+        with self.assertRaises(exception.StringLengthExceeded):
+            self.catalog_api.create_endpoint(endpoint['id'], endpoint.copy())
 
 
 class SqlPolicy(SqlTests, test_backend.PolicyTests):

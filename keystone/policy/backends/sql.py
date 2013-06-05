@@ -14,25 +14,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import functools
-
 from keystone.common import sql
 from keystone.common.sql import migration
 from keystone import exception
 from keystone.policy.backends import rules
-
-
-def handle_conflicts(type='object'):
-    """Converts IntegrityError into HTTP 409 Conflict."""
-    def decorator(method):
-        @functools.wraps(method)
-        def wrapper(*args, **kwargs):
-            try:
-                return method(*args, **kwargs)
-            except sql.IntegrityError as e:
-                raise exception.Conflict(type=type, details=str(e))
-        return wrapper
-    return decorator
 
 
 class PolicyModel(sql.ModelBase, sql.DictBase):
@@ -46,10 +31,10 @@ class PolicyModel(sql.ModelBase, sql.DictBase):
 
 class Policy(sql.Base, rules.Policy):
     # Internal interface to manage the database
-    def db_sync(self):
-        migration.db_sync()
+    def db_sync(self, version=None):
+        migration.db_sync(version=version)
 
-    @handle_conflicts(type='policy')
+    @sql.handle_conflicts(type='policy')
     def create_policy(self, policy_id, policy):
         session = self.get_session()
 
@@ -68,17 +53,17 @@ class Policy(sql.Base, rules.Policy):
 
     def _get_policy(self, session, policy_id):
         """Private method to get a policy model object (NOT a dictionary)."""
-        try:
-            return session.query(PolicyModel).filter_by(id=policy_id).one()
-        except sql.NotFound:
+        ref = session.query(PolicyModel).get(policy_id)
+        if not ref:
             raise exception.PolicyNotFound(policy_id=policy_id)
+        return ref
 
     def get_policy(self, policy_id):
         session = self.get_session()
 
         return self._get_policy(session, policy_id).to_dict()
 
-    @handle_conflicts(type='policy')
+    @sql.handle_conflicts(type='policy')
     def update_policy(self, policy_id, policy):
         session = self.get_session()
 

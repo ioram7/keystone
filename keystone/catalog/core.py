@@ -17,6 +17,7 @@
 
 """Main entry point into the Catalog service."""
 
+from keystone.common import dependency
 from keystone.common import logging
 from keystone.common import manager
 from keystone import config
@@ -28,7 +29,7 @@ LOG = logging.getLogger(__name__)
 
 
 def format_url(url, data):
-    """Helper Method for all Backend Catalog's to Deal with URLS"""
+    """Safely string formats a user-defined URL with the given data."""
     try:
         result = url.replace('$(', '%(') % data
     except AttributeError:
@@ -51,6 +52,7 @@ def format_url(url, data):
     return result
 
 
+@dependency.provider('catalog_api')
 class Manager(manager.Manager):
     """Default pivot point for the Catalog backend.
 
@@ -189,7 +191,7 @@ class Driver(object):
         raise exception.NotImplemented()
 
     def get_catalog(self, user_id, tenant_id, metadata=None):
-        """Retreive and format the current service catalog.
+        """Retrieve and format the current service catalog.
 
         Example::
 
@@ -207,6 +209,36 @@ class Driver(object):
 
         :returns: A nested dict representing the service catalog or an
                   empty dict.
+        :raises: keystone.exception.NotFound
+
+        """
+        raise exception.NotImplemented()
+
+    def get_v3_catalog(self, user_id, tenant_id, metadata=None):
+        """Retrieve and format the current V3 service catalog.
+
+        Example::
+
+            [
+                {
+                    "endpoints": [
+                    {
+                        "interface": "public",
+                        "id": "--endpoint-id--",
+                        "region": "RegionOne",
+                        "url": "http://external:8776/v1/--project-id--"
+                    },
+                    {
+                        "interface": "internal",
+                        "id": "--endpoint-id--",
+                        "region": "RegionOne",
+                        "url": "http://internal:8776/v1/--project-id--"
+                    }],
+                "id": "--service-id--",
+                "type": "volume"
+            }]
+
+        :returns: A list representing the service catalog or an empty list
         :raises: keystone.exception.NotFound
 
         """

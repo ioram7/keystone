@@ -21,9 +21,10 @@ Configuring Services to work with Keystone
 .. toctree::
    :maxdepth: 1
 
-   middlewarearchitecture
+..  _middlewarearchitecture: middlewarearchitecture.rst
+..  _configuration: configuration.rst
 
-Once Keystone is installed and running (see :doc:`configuration`), services
+Once Keystone is installed and running (see configuration_), services
 need to be configured to work with it. To do this, we primarily install and
 configure middleware for the OpenStack service to handle authentication tasks
 or otherwise interact with Keystone.
@@ -38,7 +39,7 @@ In general:
 
 The middleware will pass those data down to the service as headers. More
 details on the architecture of that setup is described in
-:doc:`middlewarearchitecture`
+middlewarearchitecture_
 
 Setting up credentials
 ======================
@@ -70,7 +71,7 @@ be able to use to authenticate users against keystone. The ``auth_token``
 middleware supports using either the shared secret described above as
 `admin_token` or users for each service.
 
-See :doc:`configuration` for a walk through on how to create tenants, users,
+See configuration_ for a walk through on how to create tenants, users,
 and roles.
 
 Setting up services
@@ -113,7 +114,7 @@ up quickly with::
 
 Once you have it, assign the service users to the Admin role. This is all
 assuming that you've already created the basic roles and settings as described
-in :doc:`configuration`::
+in configuration_:
 
     keystone user-role-add --tenant_id=[uuid of the service tenant] \
                            --user=[uuid of the service account] \
@@ -162,7 +163,7 @@ Keystone Auth-Token Middleware
 
 The Keystone auth_token middleware is a WSGI component that can be inserted in
 the WSGI pipeline to handle authenticating tokens with Keystone. You can
-get more details of the middleware in :doc:`middlewarearchitecture`.
+get more details of the middleware in middlewarearchitecture_.
 
 Configuring Nova to use Keystone
 --------------------------------
@@ -176,151 +177,8 @@ Configuring Swift to use Keystone
 ---------------------------------
 
 Similar to Nova, swift can be configured to use Keystone for authentication
-rather than its built in 'tempauth'.
-
-1. Add a service endpoint for Swift to Keystone
-
-2. Configure the paste file for swift-proxy (`/etc/swift/swift-proxy.conf`)
-
-3. Reconfigure Swift's proxy server to use Keystone instead of TempAuth.
-   Here's an example `/etc/swift/proxy-server.conf`::
-
-    [DEFAULT]
-    bind_port = 8888
-    user = <user>
-
-    [pipeline:main]
-    pipeline = catch_errors healthcheck cache authtoken keystone proxy-server
-
-    [app:proxy-server]
-    use = egg:swift#proxy
-    account_autocreate = true
-
-    [filter:keystone]
-    paste.filter_factory = keystone.middleware.swift_auth:filter_factory
-    operator_roles = admin, swiftoperator
-
-    [filter:authtoken]
-    paste.filter_factory = keystone.middleware.auth_token:filter_factory
-    # Delaying the auth decision is required to support token-less
-    # usage for anonymous referrers ('.r:*') or for tempurl/formpost
-    # middleware.
-    delay_auth_decision = 1
-    auth_port = 35357
-    auth_host = 127.0.0.1
-    auth_token = ADMIN
-    admin_token = ADMIN
-
-    [filter:cache]
-    use = egg:swift#memcache
-    set log_name = cache
-
-    [filter:catch_errors]
-    use = egg:swift#catch_errors
-
-    [filter:healthcheck]
-    use = egg:swift#healthcheck
-
-.. Note::
-   Your user needs to have the role swiftoperator or admin by default
-   to be able to operate on an swift account or as specified by the
-   variable `operator_roles`.
-
-4. Restart swift
-
-5. Verify that keystone is providing authentication to Swift
-
-    $ swift -V 2 -A http://localhost:5000/v2.0 -U admin:admin -K ADMIN stat
-
-.. NOTE::
-   Instead of connecting to Swift here, as you would with other services, we
-   are connecting directly to Keystone.
-
-Configuring Swift with S3 emulation to use Keystone
----------------------------------------------------
-
-Keystone supports validating S3 tokens using the same tokens as the
-generated EC2 tokens. When you have generated a pair of EC2 access
-token and secret you can access your swift cluster directly with the
-S3 API.
-
-1. Ensure you have defined the S3 service in your `keystone.conf`. First, define the filter as follows::
-
-    [filter:s3_extension]
-    paste.filter_factory = keystone.contrib.s3:S3Extension.factory
-
-Then, ensure that the filter is being called by the admin_api pipeline, as follows::
-
-    [pipeline:admin_api]
-    pipeline = token_auth [....] ec2_extension s3_extension [...]
-
-2. Configure the paste file for swift-proxy
-   (`/etc/swift/swift-proxy.conf` to use S3token and Swift3
-   middleware.
-
-   Here's an example that by default communicates with keystone via https ::
-
-    [DEFAULT]
-    bind_port = 8080
-    user = <user>
-
-    [pipeline:main]
-    pipeline = catch_errors healthcheck cache swift3 s3token authtoken keystone proxy-server
-
-    [app:proxy-server]
-    use = egg:swift#proxy
-    account_autocreate = true
-
-    [filter:catch_errors]
-    use = egg:swift#catch_errors
-
-    [filter:healthcheck]
-    use = egg:swift#healthcheck
-
-    [filter:cache]
-    use = egg:swift#memcache
-
-    [filter:swift3]
-    use = egg:swift#swift3
-
-    [filter:keystone]
-    paste.filter_factory = keystone.middleware.swift_auth:filter_factory
-    operator_roles = admin, swiftoperator
-
-    [filter:s3token]
-    paste.filter_factory = keystone.middleware.s3_token:filter_factory
-    # uncomment the following line if you don't want to use SSL
-    # auth_protocol = http
-    auth_port = 35357
-    auth_host = 127.0.0.1
-
-    [filter:authtoken]
-    paste.filter_factory = keystone.middleware.auth_token:filter_factory
-    # uncomment the following line if you don't want to use SSL
-    # auth_protocol = http
-    auth_port = 35357
-    auth_host = 127.0.0.1
-    auth_token = ADMIN
-    admin_token = ADMIN
-
-3. You can then access directly your Swift via the S3 API, here's an
-   example with the `boto` library::
-
-    import boto
-    import boto.s3.connection
-
-    connection = boto.connect_s3(
-        aws_access_key_id='<ec2 access key for user>',
-        aws_secret_access_key='<ec2 secret access key for user>',
-        port=8080,
-        host='localhost',
-        is_secure=False,
-        calling_format=boto.s3.connection.OrdinaryCallingFormat())
-
-
-.. Note::
-   With the S3 middleware you are connecting to the `Swift` proxy and
-   not to `keystone`.
+rather than its built in 'tempauth'. Refer to the `overview_auth` documentation
+in Swift. 
 
 Auth-Token Middleware with Username and Password
 ------------------------------------------------
@@ -335,7 +193,7 @@ Here is an example paste config filter that makes use of the 'admin_user' and
 'admin_password' parameters::
 
     [filter:authtoken]
-    paste.filter_factory = keystone.middleware.auth_token:filter_factory
+    paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
     auth_port = 35357
     auth_host = 127.0.0.1
     auth_token = 012345SECRET99TOKEN012345
@@ -351,7 +209,7 @@ The auth_token middleware can also be configured in nova.conf
 parameters::
 
     [filter:authtoken]
-    paste.filter_factory = keystone.middleware.auth_token:filter_factory
+    paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
 
 and in nova.conf::
 
