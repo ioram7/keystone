@@ -25,6 +25,7 @@ from keystone.common import logging
 _DEFAULT_LOG_FORMAT = "%(asctime)s %(levelname)8s [%(name)s] %(message)s"
 _DEFAULT_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 _DEFAULT_AUTH_METHODS = ['password', 'token']
+_DEFAULT_AUTH_PROTOCOLS = ['saml']
 
 COMMON_CLI_OPTS = [
     cfg.BoolOpt('debug',
@@ -399,6 +400,22 @@ def configure():
     register_str(
         'token', group='auth',
         default='keystone.auth.plugins.password.Password')
+    
+    register_list('protocols', group='auth', default=_DEFAULT_AUTH_PROTOCOLS)
+    register_str(
+        'saml', group='auth',
+        default='keystone.auth.plugins.federated.protocol.saml.SAML')
+    # register any non-default auth protocols here (
+    for protocol_name in CONF.auth.protocols:
+        if protocol_name not in _DEFAULT_AUTH_PROTOCOLS:
+            register_str(protocol_name, group='auth')
+    
+    register_str(
+        'attribute_mapper', group='auth',
+        default='keystone.auth.plugins.federated.mapping.Default')
+    register_str(
+        'issuing_policy', group='auth',
+        default='keystone.auth.plugins.federated.issuing_policy.Default')
 
     # register any non-default auth methods here (used by extensions, etc)
     for method_name in CONF.auth.methods:
