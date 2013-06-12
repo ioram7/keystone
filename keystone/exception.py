@@ -128,6 +128,14 @@ class AuthMethodNotSupported(AuthPluginException):
     def __init__(self, *args, **kwargs):
         super(AuthMethodNotSupported, self).__init__(*args, **kwargs)
         self.authentication = {'methods': CONF.auth.methods}
+        
+        
+class AuthProtocolNotSupported(AuthPluginException):
+    """Attempted to authenticate with an unsupported protocol."""
+
+    def __init__(self, *args, **kwargs):
+        super(AuthProtocolNotSupported, self).__init__(*args, **kwargs)
+        self.authentication = {'protocols': CONF.auth.protocols}
 
 
 class AdditionalAuthRequired(AuthPluginException):
