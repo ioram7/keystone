@@ -12,6 +12,8 @@ from keystone.common import config
 from keystone.common import logging
 from keystone.openstack.common import importutils
 
+from keystone.auth.plugins.federated import user_management
+
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
@@ -33,9 +35,8 @@ def get_auth_protocol(protocol_name):
 
 class Federated(auth.AuthMethodHandler):
     def __init__(self):
-        self.mapping_api = CONF.auth.get("attribute_mapper")
-        self.issuing_policy = CONF.auth.get("issuing_policy")
-        self.protocols = []
+        self.mapping_api = importutils.import_object(CONF.auth.get("attribute_mapper"))
+        self.issuing_policy = importutils.import_object(CONF.auth.get("issuing_policy"))
     
     
 
@@ -76,7 +77,9 @@ class Federated(auth.AuthMethodHandler):
         # Check Issuing Policy
         self.issuing_policy.check_issuers(attributes, provider)
         
-        auth_context["user_id"] = uid
+        user_manager = user_management.UserManager()
+        
+        auth_context["user_id"] = user_manager.manage(uid)
         auth_context["validity"] = validity
-        auth_context["attributes"] = self.mapper.map(attributes)
+        auth_context["attributes"] = self.mapping_api.map(attributes)
         return 

@@ -58,9 +58,11 @@ class SAML(object):
             print e
             try:
                 resp = base64.b64decode(v)
+                print resp
                 resp = ElementTree(fromstring(resp))
-            except TypeError:
+            except Exception:
                 resp = base64.b64decode(v.replace(" ", "+"))
+                print resp
                 resp = ElementTree(fromstring(resp))
         if self.check_signature(assertion, validation):
             return resp
