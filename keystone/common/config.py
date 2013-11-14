@@ -22,6 +22,7 @@ from keystone.openstack.common import log as logging
 _DEFAULT_LOG_FORMAT = "%(asctime)s %(levelname)8s [%(name)s] %(message)s"
 _DEFAULT_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 _DEFAULT_AUTH_METHODS = ['external', 'password', 'token']
+_DEFAULT_AUTH_PROTOCOLS = ['saml']
 
 
 FILE_OPTIONS = {
@@ -256,7 +257,19 @@ FILE_OPTIONS = {
                    default='keystone.auth.plugins.token.Token'),
         #deals with REMOTE_USER authentication
         cfg.StrOpt('external',
-                   default='keystone.auth.plugins.external.Default')],
+                   default='keystone.auth.plugins.external.Default'),
+        cfg.ListOpt('protocols', default=_DEFAULT_AUTH_PROTOCOLS),
+        cfg.StrOpt('saml',
+                   default='keystone.auth.plugins.federated.protocols.saml.SAML'),
+        cfg.StrOpt('discovery',
+                   default='keystone.auth.plugins.federated.discovery.Default'),
+        cfg.StrOpt('attribute_mapper',
+                   default='keystone.auth.plugins.federated.mapping.Default'),
+        cfg.StrOpt('issuing_policy',
+                   default='keystone.auth.plugins.federated.issuing_policy.Default'),
+        cfg.StrOpt('mapping_file', default='/etc/keystone/mapping_file'),
+        cfg.StrOpt('issuing_policy_file',
+                   default='/etc/keystone/issuing_policy_file')],
     'paste_deploy': [
         cfg.StrOpt('config_file', default=None)],
     'memcache': [
@@ -292,6 +305,9 @@ def setup_authentication(conf=None):
     for method_name in conf.auth.methods:
         if method_name not in _DEFAULT_AUTH_METHODS:
             conf.register_opt(cfg.StrOpt(method_name), group='auth')
+    for protocol_name in CONF.auth.protocols:
+        if protocol_name not in _DEFAULT_AUTH_PROTOCOLS:
+            conf.register_opt(cfg.StrOpt(protocol_name), group='auth')
 
 
 def configure(conf=None):
