@@ -1,0 +1,23 @@
+Setting up federation in a devstack environment.
+
+1. Install dependency for SAML authentication module.
+
+The python module dm.xmlsec.binding is used by the SAML module in the federated code for handling signatures on the requests.
+
+It can be downloaded from https://pypi.python.org/pypi/dm.xmlsec.binding/1.0b3
+
+2. Modify the stackrc script with the correct keystone repository:
+        The URL is https://github.com/kwss/keystone.git
+        The latest branch is fed-plugin-moonshot
+
+3. Modify the libs/keystone script so that the following line:
+        cp -p $KEYSTONE_DIR/etc/keystone.conf.sample $KEYSTONE_CONF
+specifies the example config file provided alongside these instructions
+
+4. Modify the example config file to point to your request signing key if SAML Identity providers will be used, this is specified in the following section of the config file:
+
+        [federated]
+        requestSigningKey = /Users/kwss2/test/keystone/cert/privkey.pem
+        SPName = KeystoneClientSecure
+
+
