@@ -1,0 +1,31 @@
+<AttributeMappings>
+	<AttributeMapping>
+		<ExternalAttributes>
+			<Attribute type="portal_id" requirement="any" />					</ExternalAttributes>
+		<InternalAttributes>
+			<Attribute type="project">
+				<AttributeValue>any_attribute_project</AttributeValue>
+			</Attribute>
+			<Attribute type="role">
+				<AttributeValue>any_attribute_role</AttributeValue>
+			</Attribute>
+		</InternalAttributes>
+	</AttributeMapping>
+	<AttributeMapping>
+		<ExternalAttributes>
+			<Attribute type="portal_id" requirement="not">
+				<AttributeValue>060D00000000SHZ\n      </AttributeValue>
+				<AttributeValue>tudent</AttributeValue>
+</Attribute>
+</ExternalAttributes>
+		<InternalAttributes>
+			<Attribute type="project">
+				<AttributeValue>not_attribute_project</AttributeValue>
+			</Attribute>
+			<Attribute type="role">
+				<AttributeValue>not_attribute_role</AttributeValue>
+			</Attribute>
+		</InternalAttributes>
+	</AttributeMapping>
+</AttributeMappings>
+
