@@ -268,6 +268,7 @@ FILE_OPTIONS = {
         cfg.StrOpt('issuing_policy',
                    default='keystone.auth.plugins.federated.issuing_policy.Default'),
         cfg.StrOpt('mapping_file', default='/etc/keystone/mapping_file'),
+        cfg.StrOpt('request_signing_key', default='/etc/keystone/signing_key.pem'),
         cfg.StrOpt('issuing_policy_file',
                    default='/etc/keystone/issuing_policy_file')],
     'paste_deploy': [

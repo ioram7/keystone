@@ -149,7 +149,7 @@ class SAML(object):
         doc.getroot().set("IssueInstant", time)
         for node in doc.getroot().iter():
                 if node.tag == "{urn:oasis:names:tc:SAML:2.0:assertion}Issuer":
-                        node.text = provider
+                        node.text = "KeyStoneClient"
 
 
         return self.encodeReq(self.sign(doc, key))

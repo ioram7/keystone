@@ -303,7 +303,8 @@ class Auth(controller.V3Controller):
             (token_id, token_data) = self.token_provider_api.issue_v3_token(
                 auth_context['user_id'], method_names, expires_at, project_id,
                 domain_id, auth_context, trust, metadata_ref, include_catalog)
-
+            print "Do we include the catalog?"
+	    print include_catalog
             return render_token_data_response(token_id, token_data,
                                               created=True)
         except exception.TrustNotFound as e:

@@ -74,7 +74,8 @@ class Federated(auth.AuthMethodHandler):
             for att in auth_context["attributes"]:
                 for role in att["role"]:
                     for project in att["project"]:
-                        auth_context["extras"]["projects"].append(project);
+                        auth_context["extras"]["projects"].append(self.assignment_api.get_project(project));
+                        print project
                         self.assignment_api.create_grant(role, 
                                                        auth_context["user_id"],
                                                        project_id=project)
