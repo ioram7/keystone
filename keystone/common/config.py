@@ -22,7 +22,7 @@ from keystone.openstack.common import log as logging
 _DEFAULT_LOG_FORMAT = "%(asctime)s %(levelname)8s [%(name)s] %(message)s"
 _DEFAULT_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 _DEFAULT_AUTH_METHODS = ['external', 'password', 'token']
-_DEFAULT_AUTH_PROTOCOLS = ['saml']
+_DEFAULT_AUTH_PROTOCOLS = ['abfab']
 
 
 FILE_OPTIONS = {
@@ -259,8 +259,8 @@ FILE_OPTIONS = {
         cfg.StrOpt('external',
                    default='keystone.auth.plugins.external.Default'),
         cfg.ListOpt('protocols', default=_DEFAULT_AUTH_PROTOCOLS),
-        cfg.StrOpt('saml',
-                   default='keystone.auth.plugins.federated.protocols.saml.SAML'),
+        cfg.StrOpt('abfab',
+                   default='keystone.auth.plugins.federated.protocols.abfab.ABFAB'),
         cfg.StrOpt('discovery',
                    default='keystone.auth.plugins.federated.discovery.Default'),
         cfg.StrOpt('attribute_mapper',
@@ -269,6 +269,7 @@ FILE_OPTIONS = {
                    default='keystone.auth.plugins.federated.issuing_policy.Default'),
         cfg.StrOpt('mapping_file', default='/etc/keystone/mapping_file'),
         cfg.StrOpt('request_signing_key', default='/etc/keystone/signing_key.pem'),
+         cfg.IntOpt('abfab_ctx_timeout', default=10),
         cfg.StrOpt('issuing_policy_file',
                    default='/etc/keystone/issuing_policy_file')],
     'paste_deploy': [

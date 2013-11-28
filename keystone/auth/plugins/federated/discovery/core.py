@@ -28,7 +28,6 @@ class Default(object):
         providers = []
         endpoints = self.endpoint_api.list_endpoints({"is_admin":True, "query_string":{}, "path":"/"})
         for service in services["services"]:
-            print service
             if service["type"].startswith("idp"):
                 for endpoint in endpoints["endpoints"]:
                     if not endpoint["interface"]=="public":
@@ -36,3 +35,4 @@ class Default(object):
                     elif endpoint["service_id"]==service["id"]:
                         providers.append(service)
         return {"providers": providers} 
+
