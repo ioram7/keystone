@@ -129,7 +129,7 @@ class ABFAB(object):
 
     def validate(self, protocol_data):
         # Client identifier
-        cid = protocol_data.get('cid')
+        cid = protocol_data.get('data').get('cid')
         if not cid:
             raise exception.ValidationError(
                 attribute='cid', target=protocol_data
