@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2012 OpenStack LLC
+# Copyright 2012 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -14,13 +12,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from keystone.common import logging
+from keystone.common import extension
 from keystone.common import wsgi
 from keystone import config
 from keystone import exception
+from keystone.openstack.common import log
 
 
-LOG = logging.getLogger(__name__)
+LOG = log.getLogger(__name__)
 CONF = config.CONF
 
 MEDIA_TYPE_JSON = 'application/vnd.openstack.identity-%s+json'
@@ -32,10 +31,10 @@ _VERSIONS = []
 class Extensions(wsgi.Application):
     """Base extensions controller to be extended by public and admin API's."""
 
-    def __init__(self, extensions=None):
-        super(Extensions, self).__init__()
-
-        self.extensions = extensions or {}
+    # extend in subclass to specify the set of extensions
+    @property
+    def extensions(self):
+        return None
 
     def get_extensions_info(self, context):
         return {'extensions': {'values': self.extensions.values()}}
@@ -48,34 +47,15 @@ class Extensions(wsgi.Application):
 
 
 class AdminExtensions(Extensions):
-    def __init__(self, *args, **kwargs):
-        super(AdminExtensions, self).__init__(*args, **kwargs)
-
-        # TODO(dolph): Extensions should obviously provide this information
-        #               themselves, but hardcoding it here allows us to match
-        #               the API spec in the short term with minimal complexity.
-        self.extensions['OS-KSADM'] = {
-            'name': 'Openstack Keystone Admin',
-            'namespace': 'http://docs.openstack.org/identity/api/ext/'
-                         'OS-KSADM/v1.0',
-            'alias': 'OS-KSADM',
-            'updated': '2011-08-19T13:25:27-06:00',
-            'description': 'Openstack extensions to Keystone v2.0 API '
-                           'enabling Admin Operations.',
-            'links': [
-                {
-                    'rel': 'describedby',
-                    # TODO(dolph): link needs to be revised after
-                    #              bug 928059 merges
-                    'type': 'text/html',
-                    'href': 'https://github.com/openstack/identity-api',
-                }
-            ]
-        }
+    @property
+    def extensions(self):
+        return extension.ADMIN_EXTENSIONS
 
 
 class PublicExtensions(Extensions):
-    pass
+    @property
+    def extensions(self):
+        return extension.PUBLIC_EXTENSIONS
 
 
 def register_version(version):
@@ -89,12 +69,10 @@ class Version(wsgi.Application):
 
         super(Version, self).__init__()
 
-    def _get_identity_url(self, version='v2.0'):
+    def _get_identity_url(self, context, version):
         """Returns a URL to keystone's own endpoint."""
-        url = CONF['%s_endpoint' % self.endpoint_url_type] % CONF
-        if url[-1] != '/':
-            url += '/'
-        return '%s%s/' % (url, version)
+        url = self.base_url(context, self.endpoint_url_type)
+        return '%s/%s/' % (url, version)
 
     def _get_versions_list(self, context):
         """The list of versions is dependent on the context."""
@@ -103,22 +81,15 @@ class Version(wsgi.Application):
             versions['v2.0'] = {
                 'id': 'v2.0',
                 'status': 'stable',
-                'updated': '2013-03-06T00:00:00Z',
+                'updated': '2014-04-17T00:00:00Z',
                 'links': [
                     {
                         'rel': 'self',
-                        'href': self._get_identity_url(version='v2.0'),
+                        'href': self._get_identity_url(context, 'v2.0'),
                     }, {
                         'rel': 'describedby',
                         'type': 'text/html',
-                        'href': 'http://docs.openstack.org/api/openstack-'
-                                'identity-service/2.0/content/'
-                    }, {
-                        'rel': 'describedby',
-                        'type': 'application/pdf',
-                        'href': 'http://docs.openstack.org/api/openstack-'
-                                'identity-service/2.0/identity-dev-guide-'
-                                '2.0.pdf'
+                        'href': 'http://docs.openstack.org/'
                     }
                 ],
                 'media-types': [
@@ -140,7 +111,7 @@ class Version(wsgi.Application):
                 'links': [
                     {
                         'rel': 'self',
-                        'href': self._get_identity_url(version='v3'),
+                        'href': self._get_identity_url(context, 'v3'),
                     }
                 ],
                 'media-types': [

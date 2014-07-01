@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2013 OpenStack LLC
+# Copyright 2013 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -14,17 +12,17 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import webob
 import webob.dec
 
-from keystone.common import logging
 from keystone.common import wsgi
 from keystone import config
+from keystone.openstack.common import log
 from keystone.openstack.common import timeutils
+from keystone.openstack.common import versionutils
 
 
 CONF = config.CONF
-LOG = logging.getLogger('access')
+LOG = log.getLogger('access')
 APACHE_TIME_FORMAT = '%d/%b/%Y:%H:%M:%S'
 APACHE_LOG_FORMAT = (
     '%(remote_addr)s - %(remote_user)s [%(datetime)s] "%(method)s %(url)s '
@@ -33,6 +31,14 @@ APACHE_LOG_FORMAT = (
 
 class AccessLogMiddleware(wsgi.Middleware):
     """Writes an access log to INFO."""
+
+    @versionutils.deprecated(
+        what='keystone.contrib.access.core.AccessLogMiddleware',
+        as_of=versionutils.deprecated.ICEHOUSE,
+        in_favor_of='eventlet debug access log or httpd access log',
+        remove_in=+2)
+    def __init__(self, *args, **kwargs):
+        super(AccessLogMiddleware, self).__init__(*args, **kwargs)
 
     @webob.dec.wsgify
     def __call__(self, request):
@@ -57,5 +63,5 @@ class AccessLogMiddleware(wsgi.Middleware):
             data['datetime'] = '%s %s' % (now.strftime(APACHE_TIME_FORMAT),
                                           now.strftime('%z') or '+0000')
 
-            LOG.info(APACHE_LOG_FORMAT % data)
+            LOG.info(APACHE_LOG_FORMAT, data)
         return response

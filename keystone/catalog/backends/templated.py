@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2012 OpenStack LLC
+# Copyright 2012 OpenStack Foundationc
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -16,18 +14,20 @@
 
 import os.path
 
+import six
+
 from keystone.catalog.backends import kvs
 from keystone.catalog import core
-from keystone.common import logging
 from keystone import config
+from keystone import exception
+from keystone.openstack.common.gettextutils import _
+from keystone.openstack.common import log
+from keystone.openstack.common import versionutils
 
 
-LOG = logging.getLogger(__name__)
+LOG = log.getLogger(__name__)
 
 CONF = config.CONF
-config.register_str('template_file',
-                    default='default_catalog.templates',
-                    group='catalog')
 
 
 def parse_templates(template_lines):
@@ -57,10 +57,7 @@ def parse_templates(template_lines):
     return o
 
 
-# TODO(jaypipes): should be templated.Catalog,
-# not templated.TemplatedCatalog to be consistent with
-# other catalog backends
-class TemplatedCatalog(kvs.Catalog):
+class Catalog(kvs.Catalog):
     """A backend that generates endpoints for the Catalog based on templates.
 
     It is usually configured via config entries that look like:
@@ -69,7 +66,7 @@ class TemplatedCatalog(kvs.Catalog):
 
     and is stored in a similar looking hierarchy. Where a value can contain
     values to be interpolated by standard python string interpolation that look
-    like (the % is replaced by a $ due to paste attmepting to interpolate on
+    like (the % is replaced by a $ due to paste attempting to interpolate on
     its own:
 
       http://localhost:$(public_port)s/
@@ -93,6 +90,7 @@ class TemplatedCatalog(kvs.Catalog):
     """
 
     def __init__(self, templates=None):
+        super(Catalog, self).__init__()
         if templates:
             self.templates = templates
         else:
@@ -100,26 +98,37 @@ class TemplatedCatalog(kvs.Catalog):
             if not os.path.exists(template_file):
                 template_file = CONF.find_file(template_file)
             self._load_templates(template_file)
-        super(TemplatedCatalog, self).__init__()
 
     def _load_templates(self, template_file):
         try:
             self.templates = parse_templates(open(template_file))
         except IOError:
-            LOG.critical(_('Unable to open template file %s') % template_file)
+            LOG.critical(_('Unable to open template file %s'), template_file)
             raise
 
     def get_catalog(self, user_id, tenant_id, metadata=None):
-        d = dict(CONF.iteritems())
+        d = dict(six.iteritems(CONF))
         d.update({'tenant_id': tenant_id,
                   'user_id': user_id})
 
         o = {}
-        for region, region_ref in self.templates.iteritems():
+        for region, region_ref in six.iteritems(self.templates):
             o[region] = {}
-            for service, service_ref in region_ref.iteritems():
-                o[region][service] = {}
-                for k, v in service_ref.iteritems():
-                    o[region][service][k] = core.format_url(v, d)
+            for service, service_ref in six.iteritems(region_ref):
+                service_data = {}
+                try:
+                    for k, v in six.iteritems(service_ref):
+                        service_data[k] = core.format_url(v, d)
+                except exception.MalformedEndpoint:
+                    continue  # this failure is already logged in format_url()
+                o[region][service] = service_data
 
         return o
+
+
+@versionutils.deprecated(
+    versionutils.deprecated.ICEHOUSE,
+    in_favor_of='keystone.catalog.backends.templated.Catalog',
+    remove_in=+2)
+class TemplatedCatalog(Catalog):
+    pass

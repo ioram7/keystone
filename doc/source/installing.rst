@@ -1,5 +1,5 @@
 ..
-      Copyright 2012 OpenStack, LLC
+      Copyright 2012 OpenStack Foundation
       Copyright 2012 Nebula, Inc
       All Rights Reserved.
 
@@ -18,14 +18,10 @@
 ===================
 Installing Keystone
 ===================
-.. _developing: developing.rst
-.. _setup: setup.rst
-.. _configuration: configuration.rst
-.. _configuring-services: configuringservices.rst
 
 This document describes how to install Keystone in order to use it. If you are
-intending to develop on or with Keystone, please read developing_ and
-setup_.
+intending to develop on or with Keystone, please read :doc:`developing` and
+:doc:`setup`.
 
 Installing from Source
 ----------------------
@@ -36,7 +32,7 @@ packages, instead using the source for the code and the Python Package Index
 
 .. _PyPi: http://pypi.python.org/pypi
 
-Its expected that your system already has python_, pip_, and git_ available.
+It's expected that your system already has python_, pip_, and git_ available.
 
 .. _python: http://www.python.org
 .. _pip: http://www.pip-installer.org/en/latest/installing.html
@@ -47,35 +43,34 @@ Clone the keystone repository::
     git clone http://github.com/openstack/keystone.git
     cd keystone
 
-Install the dependencies to run keystone::
+Install the keystone web service::
 
-    sudo pip install -r requirements.txt
+    python setup.py install
 
-And at this point, you should have all the pieces you need to run keystone
-installed on your system. The following commands should be available on the
-commandline path:
+You should have all the pieces you need to run keystone installed on your
+system. The following commands should be available on the command-line path:
 
-* ``keystone`` the keystone client, used to configure keystone
+* ``keystone`` the keystone client, used to interact with keystone
 * ``keystone-manage`` used to bootstrap keystone data
 * ``keystone-all`` used to run the keystone services
 
-You will find sample configuration files in ``etc/``
+You will find sample configuration files in ``etc/``:
 
-* keystone.conf
-* keystone-paste.ini
-* logging.conf
-* policy.json
-* default_catalog.templates
+* ``keystone.conf``
+* ``keystone-paste.ini``
+* ``logging.conf``
+* ``policy.json``
+* ``default_catalog.templates``
 
-From here, refer to configuration_ to choose which backend drivers to
+From here, refer to :doc:`configuration` to choose which backend drivers to
 enable and use. Once configured, you should be able to run keystone by issuing
 the command::
 
     keystone-all
 
-which (by default) will show logging on the console from which it was started.
+By default, this will show logging on the console from which it was started.
 Once started, you can initialize data in keystone for use with the rest of
-openstack, as described in configuring-services_.
+OpenStack, as described in :doc:`configuringservices`.
 
 An excellent reference implementation of setting up keystone is DEVSTACK_,
 most commonly used for development and testing setup of not only Keystone,
@@ -83,7 +78,7 @@ but all of the core OpenStack projects.
 
 .. _DEVSTACK: http://devstack.org/
 
-The script with the latest examples of intializing data in Keystone is a
+The script with the latest examples of initializing data in Keystone is a
 bash script called keystone_data.sh_
 
 .. _keystone_data.sh: https://github.com/openstack-dev/devstack/blob/master/files/keystone_data.sh
@@ -98,12 +93,12 @@ on Ubuntu::
 
 In using Ubuntu's packages, the packages will set up a user account for
 the Keystone service (`keystone`), and place default configurations in
-``/etc/keystone``. The debian installer will also ask you about configuration
+``/etc/keystone``. The Debian installer will also ask you about configuration
 options for setting up and running Keystone. As of this writing, the defaults
-for Keystone backends are all SQL based, stored locally in a sqlite.
+for Keystone backends are all SQL based, stored locally in a SQLite.
 
 Once installed, you still need to initialize data in Keystone, which you can
-find described in configuring-services_.
+find described in :doc:`configuringservices`.
 
 Installing from packages: Fedora
 --------------------------------

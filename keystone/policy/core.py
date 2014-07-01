@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2012 OpenStack LLC
+# Copyright 2012 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -16,6 +14,9 @@
 
 """Main entry point into the Policy service."""
 
+import abc
+
+import six
 
 from keystone.common import dependency
 from keystone.common import manager
@@ -38,13 +39,13 @@ class Manager(manager.Manager):
     def __init__(self):
         super(Manager, self).__init__(CONF.policy.driver)
 
-    def get_policy(self, context, policy_id):
+    def get_policy(self, policy_id):
         try:
             return self.driver.get_policy(policy_id)
         except exception.NotFound:
             raise exception.PolicyNotFound(policy_id=policy_id)
 
-    def update_policy(self, context, policy_id, policy):
+    def update_policy(self, policy_id, policy):
         if 'id' in policy and policy_id != policy['id']:
             raise exception.ValidationError('Cannot change policy ID')
         try:
@@ -52,14 +53,27 @@ class Manager(manager.Manager):
         except exception.NotFound:
             raise exception.PolicyNotFound(policy_id=policy_id)
 
-    def delete_policy(self, context, policy_id):
+    @manager.response_truncated
+    def list_policies(self, hints=None):
+        # NOTE(henry-nash): Since the advantage of filtering or list limiting
+        # of policies at the driver level is minimal, we leave this to the
+        # caller.
+        return self.driver.list_policies()
+
+    def delete_policy(self, policy_id):
         try:
             return self.driver.delete_policy(policy_id)
         except exception.NotFound:
             raise exception.PolicyNotFound(policy_id=policy_id)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class Driver(object):
+
+    def _get_list_limit(self):
+        return CONF.policy.list_limit or CONF.list_limit
+
+    @abc.abstractmethod
     def enforce(self, context, credentials, action, target):
         """Verify that a user is authorized to perform action.
 
@@ -68,6 +82,7 @@ class Driver(object):
         """
         raise exception.NotImplemented()
 
+    @abc.abstractmethod
     def create_policy(self, policy_id, policy):
         """Store a policy blob.
 
@@ -76,10 +91,12 @@ class Driver(object):
         """
         raise exception.NotImplemented()
 
+    @abc.abstractmethod
     def list_policies(self):
         """List all policies."""
         raise exception.NotImplemented()
 
+    @abc.abstractmethod
     def get_policy(self, policy_id):
         """Retrieve a specific policy blob.
 
@@ -88,6 +105,7 @@ class Driver(object):
         """
         raise exception.NotImplemented()
 
+    @abc.abstractmethod
     def update_policy(self, policy_id, policy):
         """Update a policy blob.
 
@@ -96,6 +114,7 @@ class Driver(object):
         """
         raise exception.NotImplemented()
 
+    @abc.abstractmethod
     def delete_policy(self, policy_id):
         """Remove a policy blob.
 

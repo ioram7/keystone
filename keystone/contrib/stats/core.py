@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2012 OpenStack LLC
+# Copyright 2012 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -14,18 +12,34 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from keystone.common import logging
+from keystone.common import extension
 from keystone.common import manager
 from keystone.common import wsgi
 from keystone import config
 from keystone import exception
-from keystone import identity
-from keystone import policy
-from keystone import token
+from keystone.openstack.common import log
+from keystone.openstack.common import versionutils
 
 
 CONF = config.CONF
-LOG = logging.getLogger(__name__)
+LOG = log.getLogger(__name__)
+
+extension_data = {
+    'name': 'OpenStack Keystone Stats API',
+    'namespace': 'http://docs.openstack.org/identity/api/ext/'
+                 'OS-STATS/v1.0',
+    'alias': 'OS-STATS',
+    'updated': '2013-07-07T12:00:0-00:00',
+    'description': 'OpenStack Keystone Stats API.',
+    'links': [
+        {
+            'rel': 'describedby',
+            # TODO(ayoung): needs a description
+            'type': 'text/html',
+            'href': 'https://github.com/openstack/identity-api',
+        }
+    ]}
+extension.register_admin_extension(extension_data['alias'], extension_data)
 
 
 class Manager(manager.Manager):
@@ -76,10 +90,7 @@ class StatsExtension(wsgi.ExtensionRouter):
 
 class StatsController(wsgi.Application):
     def __init__(self):
-        self.identity_api = identity.Manager()
-        self.policy_api = policy.Manager()
         self.stats_api = Manager()
-        self.token_api = token.Manager()
         super(StatsController, self).__init__()
 
     def get_stats(self, context):
@@ -89,20 +100,20 @@ class StatsController(wsgi.Application):
                 {
                     'type': 'identity',
                     'api': 'admin',
-                    'extra': self.stats_api.get_stats(context, 'admin'),
+                    'extra': self.stats_api.get_stats('admin'),
                 },
                 {
                     'type': 'identity',
                     'api': 'public',
-                    'extra': self.stats_api.get_stats(context, 'public'),
+                    'extra': self.stats_api.get_stats('public'),
                 },
             ]
         }
 
     def reset_stats(self, context):
         self.assert_admin(context)
-        self.stats_api.set_stats(context, 'public', dict())
-        self.stats_api.set_stats(context, 'admin', dict())
+        self.stats_api.set_stats('public', dict())
+        self.stats_api.set_stats('admin', dict())
 
 
 class StatsMiddleware(wsgi.Middleware):
@@ -116,28 +127,28 @@ class StatsMiddleware(wsgi.Middleware):
 
     response_attributes = ['status_int']
 
+    @versionutils.deprecated(
+        what='keystone.contrib.stats.core.StatsMiddleware',
+        as_of=versionutils.deprecated.ICEHOUSE,
+        in_favor_of='external tooling',
+        remove_in=+2)
     def __init__(self, *args, **kwargs):
         self.stats_api = Manager()
         return super(StatsMiddleware, self).__init__(*args, **kwargs)
 
     def _resolve_api(self, host):
-        if str(CONF.admin_port) in host:
+        if host.endswith(':%s' % (CONF.admin_port)):
             return 'admin'
-        elif str(CONF.public_port) in host:
+        elif host.endswith(':%s' % (CONF.public_port)):
             return 'public'
         else:
-            # NOTE(dolph): I don't think this is actually reachable, but hey
-            msg = 'Unable to resolve API as either public or admin: %s' % host
-            LOG.warning(msg)
             return host
 
     def capture_stats(self, host, obj, attributes):
         """Collect each attribute from the given object."""
         for attribute in attributes:
-            self.stats_api.increment_stat(None,
-                                          self._resolve_api(host),
-                                          attribute,
-                                          getattr(obj, attribute))
+            self.stats_api.increment_stat(
+                self._resolve_api(host), attribute, getattr(obj, attribute))
 
     def process_request(self, request):
         """Monitor incoming request attributes."""

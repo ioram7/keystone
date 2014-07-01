@@ -1,5 +1,5 @@
 ..
-      Copyright 2011-2012 OpenStack, LLC
+      Copyright 2011-2012 OpenStack Foundation
       All Rights Reserved.
 
       Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -44,6 +44,7 @@ Getting Started
     setup
     installing
     configuration
+    configure_federation
     configuringservices
     community
 
@@ -64,16 +65,19 @@ Developers Documentation
    developing
    architecture
    middlewarearchitecture
+   http-api
    api_curl_examples
    apache-httpd
    external-auth
+   event_notifications
+   extension_development
 
 Code Documentation
 ==================
 .. toctree::
    :maxdepth: 1
 
-   api/autoindex
+   api/modules
 
 Indices and tables
 ==================

@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2012 OpenStack LLC
+# Copyright 2012 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -24,6 +22,61 @@ class Catalog(kvs.Base, catalog.Driver):
     def get_catalog(self, user_id, tenant_id, metadata=None):
         return self.db.get('catalog-%s-%s' % (tenant_id, user_id))
 
+    # region crud
+
+    def _delete_child_regions(self, region_id):
+        """Delete all child regions.
+
+        Recursively delete any region that has the supplied region
+        as its parent.
+        """
+        children = [r for r in self.list_regions()
+                    if r['parent_region_id'] == region_id]
+        for child in children:
+            self._delete_child_regions(child['id'])
+            self.delete_region(child['id'])
+
+    def _check_parent_region(self, region_ref):
+        """Raise a NotFound if the parent region does not exist.
+
+        If the region_ref has a specified parent_region_id, check that
+        the parent exists, otherwise, raise a NotFound.
+        """
+        parent_region_id = region_ref.get('parent_region_id')
+        if parent_region_id is not None:
+            # This will raise NotFound if the parent doesn't exist,
+            # which is the behavior we want.
+            self.get_region(parent_region_id)
+
+    def create_region(self, region):
+        region_id = region['id']
+        region.setdefault('parent_region_id')
+        self._check_parent_region(region)
+        self.db.set('region-%s' % region_id, region)
+        region_list = set(self.db.get('region_list', []))
+        region_list.add(region_id)
+        self.db.set('region_list', list(region_list))
+        return region
+
+    def list_regions(self):
+        return [self.get_region(x) for x in self.db.get('region_list', [])]
+
+    def get_region(self, region_id):
+        return self.db.get('region-%s' % region_id)
+
+    def update_region(self, region_id, region):
+        region.setdefault('parent_region_id')
+        self._check_parent_region(region)
+        self.db.set('region-%s' % region_id, region)
+        return region
+
+    def delete_region(self, region_id):
+        self._delete_child_regions(region_id)
+        self.db.delete('region-%s' % region_id)
+        region_list = set(self.db.get('region_list', []))
+        region_list.remove(region_id)
+        self.db.set('region_list', list(region_list))
+
     # service crud
 
     def create_service(self, service_id, service):
@@ -33,7 +86,7 @@ class Catalog(kvs.Base, catalog.Driver):
         self.db.set('service_list', list(service_list))
         return service
 
-    def list_services(self):
+    def list_services(self, hints):
         return [self.get_service(x) for x in self.db.get('service_list', [])]
 
     def get_service(self, service_id):
@@ -64,7 +117,7 @@ class Catalog(kvs.Base, catalog.Driver):
         self.db.set('endpoint_list', list(endpoint_list))
         return endpoint
 
-    def list_endpoints(self):
+    def list_endpoints(self, hints):
         return [self.get_endpoint(x) for x in self.db.get('endpoint_list', [])]
 
     def get_endpoint(self, endpoint_id):

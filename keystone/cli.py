@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2012 OpenStack LLC
+# Copyright 2012 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -16,16 +14,16 @@
 
 from __future__ import absolute_import
 
-import grp
-import pwd
+import os
 
 from oslo.config import cfg
 import pbr.version
 
 from keystone.common import openssl
+from keystone.common import sql
+from keystone.common.sql import migration_helpers
+from keystone.common import utils
 from keystone import config
-from keystone.openstack.common import importutils
-from keystone.openstack.common import jsonutils
 from keystone import token
 
 CONF = config.CONF
@@ -55,14 +53,37 @@ class DbSync(BaseApp):
                                   'version. If not provided, db_sync will '
                                   'migrate the database to the latest known '
                                   'version.'))
+        parser.add_argument('--extension', default=None,
+                            help=('Migrate the database for the specified '
+                                  'extension. If not provided, db_sync will '
+                                  'migrate the common repository.'))
+
         return parser
 
     @staticmethod
     def main():
-        for k in ['identity', 'catalog', 'policy', 'token', 'credential']:
-            driver = importutils.import_object(getattr(CONF, k).driver)
-            if hasattr(driver, 'db_sync'):
-                driver.db_sync(CONF.command.version)
+        version = CONF.command.version
+        extension = CONF.command.extension
+        migration_helpers.sync_database_to_version(extension, version)
+
+
+class DbVersion(BaseApp):
+    """Print the current migration version of the database."""
+
+    name = 'db_version'
+
+    @classmethod
+    def add_argument_parser(cls, subparsers):
+        parser = super(DbVersion, cls).add_argument_parser(subparsers)
+        parser.add_argument('--extension', default=None,
+                            help=('Migrate the database for the specified '
+                                  'extension. If not provided, db_sync will '
+                                  'migrate the common repository.'))
+
+    @staticmethod
+    def main():
+        extension = CONF.command.extension
+        migration_helpers.print_db_version(extension)
 
 
 class BaseCertificateSetup(BaseApp):
@@ -72,8 +93,9 @@ class BaseCertificateSetup(BaseApp):
     def add_argument_parser(cls, subparsers):
         parser = super(BaseCertificateSetup,
                        cls).add_argument_parser(subparsers)
-        parser.add_argument('--keystone-user')
-        parser.add_argument('--keystone-group')
+        running_as_root = (os.geteuid() == 0)
+        parser.add_argument('--keystone-user', required=running_as_root)
+        parser.add_argument('--keystone-group', required=running_as_root)
         return parser
 
     @staticmethod
@@ -84,14 +106,14 @@ class BaseCertificateSetup(BaseApp):
         try:
             a = CONF.command.keystone_user
             if a:
-                keystone_user_id = pwd.getpwnam(a).pw_uid
+                keystone_user_id = utils.get_unix_user(a)[0]
         except KeyError:
             raise ValueError("Unknown user '%s' in --keystone-user" % a)
 
         try:
             a = CONF.command.keystone_group
             if a:
-                keystone_group_id = grp.getgrnam(a).gr_gid
+                keystone_group_id = utils.get_unix_group(a)[0]
         except KeyError:
             raise ValueError("Unknown group '%s' in --keystone-group" % a)
 
@@ -133,66 +155,9 @@ class TokenFlush(BaseApp):
         token_manager.driver.flush_expired_tokens()
 
 
-class ImportLegacy(BaseApp):
-    """Import a legacy database."""
-
-    name = 'import_legacy'
-
-    @classmethod
-    def add_argument_parser(cls, subparsers):
-        parser = super(ImportLegacy, cls).add_argument_parser(subparsers)
-        parser.add_argument('old_db')
-        return parser
-
-    @staticmethod
-    def main():
-        from keystone.common.sql import legacy
-        migration = legacy.LegacyMigration(CONF.command.old_db)
-        migration.migrate_all()
-
-
-class ExportLegacyCatalog(BaseApp):
-    """Export the service catalog from a legacy database."""
-
-    name = 'export_legacy_catalog'
-
-    @classmethod
-    def add_argument_parser(cls, subparsers):
-        parser = super(ExportLegacyCatalog,
-                       cls).add_argument_parser(subparsers)
-        parser.add_argument('old_db')
-        return parser
-
-    @staticmethod
-    def main():
-        from keystone.common.sql import legacy
-        migration = legacy.LegacyMigration(CONF.command.old_db)
-        print '\n'.join(migration.dump_catalog())
-
-
-class ImportNovaAuth(BaseApp):
-    """Import a dump of nova auth data into keystone."""
-
-    name = 'import_nova_auth'
-
-    @classmethod
-    def add_argument_parser(cls, subparsers):
-        parser = super(ImportNovaAuth, cls).add_argument_parser(subparsers)
-        parser.add_argument('dump_file')
-        return parser
-
-    @staticmethod
-    def main():
-        from keystone.common.sql import nova
-        dump_data = jsonutils.loads(open(CONF.command.dump_file).read())
-        nova.import_auth(dump_data)
-
-
 CMDS = [
     DbSync,
-    ExportLegacyCatalog,
-    ImportLegacy,
-    ImportNovaAuth,
+    DbVersion,
     PKISetup,
     SSLSetup,
     TokenFlush,
@@ -212,10 +177,15 @@ command_opt = cfg.SubCommandOpt('command',
 
 def main(argv=None, config_files=None):
     CONF.register_cli_opt(command_opt)
+
+    config.configure()
+    sql.initialize()
+    config.set_default_for_default_log_levels()
+
     CONF(args=argv[1:],
          project='keystone',
          version=pbr.version.VersionInfo('keystone').version_string(),
          usage='%(prog)s [' + '|'.join([cmd.name for cmd in CMDS]) + ']',
          default_config_files=config_files)
-    config.setup_logging(CONF)
+    config.setup_logging()
     CONF.command.cmd_class.main()

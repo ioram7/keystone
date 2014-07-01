@@ -1,10 +1,22 @@
 #!/usr/bin/env python
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-import greenlet
+# Copyright 2013 OpenStack Foundation
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 import logging
 import os
-import signal
+import socket
 import sys
 
 # If ../keystone/__init__.py exists, add ../ to Python search path, so that
@@ -21,58 +33,77 @@ if os.path.exists(os.path.join(possible_topdir,
 from paste import deploy
 import pbr.version
 
-from keystone.common import utils
-from keystone.common import wsgi_server
-from keystone import config
 from keystone.openstack.common import gettextutils
-from keystone.openstack.common import importutils
+# NOTE(dstanek): gettextutils.enable_lazy() must be called before
+# gettextutils._() is called to ensure it has the desired lazy lookup
+# behavior. This includes cases, like keystone.exceptions, where
+# gettextutils._() is called at import time.
+gettextutils.enable_lazy()
+
+from keystone import backends
+from keystone.common import dependency
+from keystone.common import environment
+from keystone.common import sql
+from keystone.common import utils
+from keystone import config
+from keystone.openstack.common.gettextutils import _
+from keystone.openstack.common import service
+from keystone.openstack.common import systemd
 
 
 CONF = config.CONF
 
 
-def create_server(conf, name, host, port):
+class ServerWrapper(object):
+    """Wraps a Server with some launching info & capabilities."""
+
+    def __init__(self, server, workers):
+        self.server = server
+        self.workers = workers
+
+    def launch_with(self, launcher):
+        self.server.listen()
+        if self.workers > 1:
+            # Use multi-process launcher
+            launcher.launch_service(self.server, self.workers)
+        else:
+            # Use single process launcher
+            launcher.launch_service(self.server)
+
+
+def create_server(conf, name, host, port, workers):
     app = deploy.loadapp('config:%s' % conf, name=name)
-    server = wsgi_server.Server(app, host=host, port=port)
+    server = environment.Server(app, host=host, port=port,
+                                keepalive=CONF.tcp_keepalive,
+                                keepidle=CONF.tcp_keepidle)
     if CONF.ssl.enable:
         server.set_ssl(CONF.ssl.certfile, CONF.ssl.keyfile,
                        CONF.ssl.ca_certs, CONF.ssl.cert_required)
-    return server
-
-
-def sigint_handler(signal, frame):
-    """Exits at SIGINT signal."""
-    logging.debug('SIGINT received, stopping servers.')
-    sys.exit(0)
+    return name, ServerWrapper(server, workers)
 
 
 def serve(*servers):
-    signal.signal(signal.SIGINT, sigint_handler)
+    if max([server[1].workers for server in servers]) > 1:
+        launcher = service.ProcessLauncher()
+    else:
+        launcher = service.ServiceLauncher()
 
-    for server in servers:
-        server.start()
+    for name, server in servers:
+        try:
+            server.launch_with(launcher)
+        except socket.error:
+            logging.exception(_('Failed to start the %(name)s server') % {
+                'name': name})
+            raise
 
     # notify calling process we are ready to serve
-    if CONF.onready:
-        try:
-            notifier = importutils.import_module(CONF.onready)
-            notifier.notify()
-        except ImportError:
-            try:
-                utils.check_output(CONF.onready.split())
-            except Exception:
-                logging.exception('Failed to execute onready command')
+    systemd.notify_once()
 
-    for server in servers:
-        try:
-            server.wait()
-        except greenlet.GreenletExit:
-            pass
+    for name, server in servers:
+        launcher.wait()
 
 
 if __name__ == '__main__':
-    gettextutils.install('keystone')
-
     dev_conf = os.path.join(possible_topdir,
                             'etc',
                             'keystone.conf')
@@ -80,11 +111,15 @@ if __name__ == '__main__':
     if os.path.exists(dev_conf):
         config_files = [dev_conf]
 
+    config.configure()
+    sql.initialize()
+    config.set_default_for_default_log_levels()
+
     CONF(project='keystone',
          version=pbr.version.VersionInfo('keystone').version_string(),
          default_config_files=config_files)
 
-    config.setup_logging(CONF)
+    config.setup_logging()
 
     # Log the options used when starting if we're in debug mode...
     if CONF.debug:
@@ -100,15 +135,21 @@ if __name__ == '__main__':
         # http://lists.openstack.org/pipermail/openstack-dev/2012-August/
         # 000794.html
         monkeypatch_thread = False
-    wsgi_server.monkey_patch_eventlet(monkeypatch_thread=monkeypatch_thread)
+    environment.use_eventlet(monkeypatch_thread)
+
+    backends.load_backends()
 
     servers = []
     servers.append(create_server(paste_config,
                                  'admin',
-                                 CONF.bind_host,
-                                 int(CONF.admin_port)))
+                                 CONF.admin_bind_host,
+                                 int(CONF.admin_port),
+                                 CONF.admin_workers))
     servers.append(create_server(paste_config,
                                  'main',
-                                 CONF.bind_host,
-                                 int(CONF.public_port)))
+                                 CONF.public_bind_host,
+                                 int(CONF.public_port),
+                                 CONF.public_workers))
+
+    dependency.resolve_future_dependencies()
     serve(*servers)
