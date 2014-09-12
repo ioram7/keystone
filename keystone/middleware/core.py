@@ -45,6 +45,29 @@ CONTEXT_ENV = wsgi.CONTEXT_ENV
 # Environment variable used to pass the request params
 PARAMS_ENV = wsgi.PARAMS_ENV
 
+class HorizonRedirectMiddleware(wsgi.Middleware):
+
+    def process_response(self, request, response):
+        print("Refer to: ", request.GET.get("refer_to"))
+        print ("TOKEN: ",response.headers.get(SUBJECT_TOKEN_HEADER))
+        print response.body
+        if(request.GET.get("refer_to") is None):
+            print "Not redirecting"
+            return response
+        refer_to=""
+        if(SUBJECT_TOKEN_HEADER in response.headers):
+            if request.GET.get("ssl"):
+                refer_to='https://'
+            else:
+                refer_to='http://'
+            refer_to+=request.GET.get("refer_to")
+            body = jsonutils.loads(response.body)
+            print ("Redirecting to: ", refer_to)
+            response.location = refer_to+"?token="+response.headers.get(SUBJECT_TOKEN_HEADER)
+            response.status = 302
+
+        return response
+
 
 class TokenAuthMiddleware(wsgi.Middleware):
     def process_request(self, request):
