@@ -465,6 +465,12 @@ FILE_OPTIONS = {
                    help='Value to be used when filtering assertion parameters '
                         'from the environment.'),
     ],
+    'virtual_organisations': [
+        cfg.StrOpt('driver',
+                   default='keystone.contrib.virtual_organisations.'
+                           'backends.sql.VirtualOrganisation',
+                   help='Virtual Organisation backend driver.'),
+    ],
     'policy': [
         cfg.StrOpt('driver',
                    default='keystone.policy.backends.sql.Policy',
