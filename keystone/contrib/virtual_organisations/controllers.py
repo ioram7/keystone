@@ -125,7 +125,18 @@ class VirtualOrganisation(_ControllerBase):
     def list_vo_roles(self, context):
         ref = self.virtual_organisations_api.list_vo_roles()
         ref = [self.filter_params(x) for x in ref]
-        return VirtualOrganisation.wrap_collection(context, ref)
+        vo_role_list = []
+	for vo in ref:
+	    roles = context.get('environment').get('KEYSTONE_AUTH_CONTEXT').get('roles', {})
+	    if not context.get("is_admin") and not 'admin' in roles:
+	        try:
+	            self.check_vo_membership_status(context, vo["id"])
+		    vo_role_list.append(vo)
+                    print "===== VO: "+vo["vo_name"]+" VO_ID: "+vo["id"]
+	        except Exception as e:
+		    pass
+
+        return VirtualOrganisation.wrap_collection(context, vo_role_list)
 
     @controller.protected()
     def get_vo_role(self, context, vo_role_id):
@@ -321,14 +332,20 @@ class VirtualOrganisation(_ControllerBase):
 
 
     def resign_from_role(self, context, vo_role_id):
+	print "==========Resign_From_Role============="
         token_id = context['token_id']
         response = self.token_provider_api.validate_token(token_id)
         # For V3 tokens, the essential data is under the 'token' value.
         # For V2, the comparable data was nested under 'access'.
         token_ref = response.get('token', response.get('access'))
         user_id = token_ref["user"]["id"]
+        print "==== USERID = " + user_id
+        if "OS-FEDERATION" in token_ref["user"]:
+            idp = token_ref.get("user").get("OS-FEDERATION").get("identity_provider")
+        else:
+            idp = "LOCAL"
         vo_role_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
-        self._remove_vo_role_membership_from_user(vo_role_id, user_id)
+        self._remove_vo_role_membership_from_user(vo_role_id, idp, user_id)
 
 
 @dependency.requires('virtual_organisations_api', 'identity_api', 'federation_api')
