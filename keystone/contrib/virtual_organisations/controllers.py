@@ -135,6 +135,8 @@ class VirtualOrganisation(_ControllerBase):
                     print "===== VO: "+vo["vo_name"]+" VO_ID: "+vo["id"]
 	        except Exception as e:
 		    pass
+            else:
+                vo_role_list = ref
 
         return VirtualOrganisation.wrap_collection(context, vo_role_list)
 
