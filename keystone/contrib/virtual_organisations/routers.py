@@ -34,7 +34,7 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
         GET /OS-FEDERATION/vo_roles/$vo_role/members/$user_id
         GET /OS-FEDERATION/vo_roles/$vo_role/members
         PATCH /OS-FEDERATION/vo_roles/$vo_role/members/$user_id
-        DELETE /OS-FEDERATION/vo_roles/$vo_role/members/$user_id
+        DELETE /OS-FEDERATION/vo_roles/$vo_role/identity_providers/$idp/members/$user_id
 
         ADMIN API for request management
         -----------------------
@@ -51,7 +51,7 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
         -----------------------
         PUT /OS-FEDERATION/vo_users - join VO
         GET /OS-FEDERATION/vo_roles/$vo_role_id/users - check status
-        DELETE /OS-FEDERATION/vo_roles/$vo_role_id/users
+        DELETE /OS-FEDERATION/vo_roles/$vo_role_id/members
 
     """
 
@@ -120,7 +120,7 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
             conditions=dict(method=['GET']))
 
         mapper.connect(
-            self._construct_url('vo_roles/{vo_role_id}/members/{user_id}'),
+            self._construct_url('vo_roles/{vo_role_id}/identity_providers/{idp}/members/{user_id}'),
             controller=vo_controller,
             action='remove_vo_role_membership_from_user',
             conditions=dict(method=['DELETE']))
@@ -177,7 +177,7 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
             conditions=dict(method=['GET']))
 
         mapper.connect(
-            self._construct_url('vo_roles/{vo_role_id}/users'),
+            self._construct_url('vo_roles/{vo_role_id}/members'),
             controller=vo_controller,
             action='resign_from_role',
             conditions=dict(method=['DELETE']))

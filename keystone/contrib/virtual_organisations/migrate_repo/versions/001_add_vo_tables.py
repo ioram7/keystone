@@ -31,7 +31,7 @@ def upgrade(migrate_engine):
         VO_TABLE,
         meta,
         sql.Column('id', sql.String(64), primary_key=True),
-        sql.Column('name', sql.String(64), nullable=False),
+        sql.Column('vo_name', sql.String(64), nullable=False),
 	sql.Column('vo_role', sql.String(64), nullable=False),
         sql.Column('group_id', sql.String(64), sql.ForeignKey('group.id'),
                    nullable=False),
