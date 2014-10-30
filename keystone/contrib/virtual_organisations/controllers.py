@@ -125,6 +125,8 @@ class VirtualOrganisation(_ControllerBase):
     def list_vo_roles(self, context):
         ref = self.virtual_organisations_api.list_vo_roles()
         ref = [self.filter_params(x) for x in ref]
+
+        #print "Ioram K"
         vo_role_list = []
 	for vo in ref:
 	    roles = context.get('environment').get('KEYSTONE_AUTH_CONTEXT').get('roles', {})
@@ -172,6 +174,8 @@ class VirtualOrganisation(_ControllerBase):
 
     @controller.protected()
     def list_vo_roles_members(self, context, vo_role_id):
+	# Ioram 29/10/2014
+        #print "IORAM > 1"
         roles = context.get('environment').get('KEYSTONE_AUTH_CONTEXT').get('roles', {})
         if not context.get("is_admin") and not 'admin' in roles:
             try:
@@ -181,6 +185,8 @@ class VirtualOrganisation(_ControllerBase):
         return self._list_vo_roles_members(vo_role_id)
 
     def _list_vo_roles_members(self, vo_role_id):
+	# Ioram 29/10/2014
+        #print "IORAM > 2"
         fed_users = [] 
         vo_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
         try:
@@ -203,6 +209,8 @@ class VirtualOrganisation(_ControllerBase):
 
     @controller.protected()
     def get_vo_role_member(self, context, vo_role_id, user_id):
+	# Ioram 29/10/2014
+        #print "IORAM > 3"
         vo_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
         users = self.identity_api.list_users_in_group(vo_ref["group_id"])
         for user in users:
@@ -256,12 +264,25 @@ class VirtualOrganisation(_ControllerBase):
         except KeyError:
             idp = "LOCAL"
         given_pin = vo_request.get("secret", None)
+
+	#Ioram 29/10/2014
+	print "IORAM> VO_Name: "+vo_request.get("vo_name")+" VO_Role: "+vo_request.get("vo_role")
         vo_ref = self.virtual_organisations_api.get_vo_role_by_name_and_role(vo_request.get("vo_name"), vo_request.get("vo_role"))
+	if vo_ref:
+	    print "IORAM> VO_REF exists"
         if not vo_ref:
-            raise exception.NotFound("The virtual organisation %s was not found" % vo_request.get("vo_name"))
+	    print "IORAM> VO_REF does not exist"
+      	    #print "IORAM>==========================="
+            raise exception.NotFound("The VO Role %s was not found in VO" % vo_request.get("vo_role"))
+            #raise exception.NotFound("The VO Role %s was not found for VO %s" % vo_request.get("vo_role"), vo_request.get("vo_name"))
+	    #print "IORAM>==========================="
+
         required_pin = vo_ref.get("pin")
+        print "IORAM> Required PIN: "+vo_ref.get("pin")+" Given PIN: "+given_pin
         vo_request = self.virtual_organisations_api.get_request_for_user(token_ref["user"]["id"], vo_ref["id"])
+        print "IORAM> Get Request for User"
         if (vo_request):
+            print "IORAM> VO Request is Forbidden (Already requested to join this VO)"
             raise exception.Forbidden("You have already requested to join this VO")
         blacklist_ref = self.virtual_organisations_api.get_vo_blacklist_for_user(token_ref["user"]["id"], vo_ref["id"], idp)
         if blacklist_ref:
@@ -387,6 +408,8 @@ class VirtualOrganisationRequest(_ControllerBase):
     # Request API
     @controller.protected()
     def list_vo_requests(self, context, vo_role_id):
+	# Ioram 29/10/2014
+        #print "IORAM > 4"
         LOG.warning(vo_role_id)
         ref = self.virtual_organisations_api.list_vo_requests(vo_role_id)
         return VirtualOrganisationRequest.wrap_collection(context, ref)
