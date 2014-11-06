@@ -210,6 +210,7 @@ class VirtualOrganisation(_ControllerBase):
                                 #print "IORAM * Append "+rule.get("remote")[0]["any_one_of"][0]+" Ok"
 	    #print "====="
         except Exception as e:
+            pass
             #print "IORAM Exception"
             #print e
         users = self.identity_api.list_users_in_group(vo_ref["group_id"])
@@ -279,7 +280,8 @@ class VirtualOrganisation(_ControllerBase):
 	#Ioram 29/10/2014
 	#print "IORAM> VO_Name: "+vo_request.get("vo_name")+" VO_Role: "+vo_request.get("vo_role")
         vo_ref = self.virtual_organisations_api.get_vo_role_by_name_and_role(vo_request.get("vo_name"), vo_request.get("vo_role"))
-	#if vo_ref:
+	if vo_ref:
+	    pass
 	    #print "IORAM> VO_REF exists"
         if not vo_ref:
 	    #print "IORAM> VO_REF does not exist"
