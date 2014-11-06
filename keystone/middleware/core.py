@@ -48,11 +48,14 @@ PARAMS_ENV = wsgi.PARAMS_ENV
 class HorizonRedirectMiddleware(wsgi.Middleware):
 
     def process_response(self, request, response):
-        print("Refer to: ", request.GET.get("refer_to"))
-        print ("TOKEN: ",response.headers.get(SUBJECT_TOKEN_HEADER))
-        print response.body
+	#Ioram 03/11/2014
+        #print "Ioram Middleware/Core process response"
+        #print "===="
+        #print("Refer to: ", request.GET.get("refer_to"))
+        #print ("TOKEN: ",response.headers.get(SUBJECT_TOKEN_HEADER))
+        #print response.body
         if(request.GET.get("refer_to") is None):
-            print "Not redirecting"
+            #print "Not redirecting"
             return response
         refer_to=""
         if(SUBJECT_TOKEN_HEADER in response.headers):
@@ -62,10 +65,11 @@ class HorizonRedirectMiddleware(wsgi.Middleware):
                 refer_to='http://'
             refer_to+=request.GET.get("refer_to")
             body = jsonutils.loads(response.body)
-            print ("Redirecting to: ", refer_to)
+            #print ("Redirecting to: ", refer_to)
             response.location = refer_to+"?token="+response.headers.get(SUBJECT_TOKEN_HEADER)
             response.status = 302
 
+        #print "===="
         return response
 
 

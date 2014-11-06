@@ -99,7 +99,7 @@ class VirtualOrganisation(_ControllerBase):
             
             context["query_string"] = {"name":virtual_organisation_role["vo_name"]}
             domains = domain_api.list_domains(context)['domains']
-            print domains
+            #print domains
             if len(domains) == 1:
                 domain = domains.pop()
             elif len(domains) > 1:
@@ -108,11 +108,11 @@ class VirtualOrganisation(_ControllerBase):
                 domain = domain_api.create_domain(context, {"name":virtual_organisation_role["vo_name"]})
         group_ref = {"name":virtual_organisation_role["vo_name"]+"."+virtual_organisation_role["vo_role"]}
         if domain.get('domain', None):
-            print domain
+            #print domain
             group_ref = {"name":virtual_organisation_role["vo_role"]}
             group_ref["domain_id"] = domain["domain"]["id"] 
         elif domain:
-            print domain
+            #print domain
             group_ref = {"name":virtual_organisation_role["vo_role"]}
             group_ref["domain_id"] = domain["id"]
         group = group_api.create_group(context, group_ref)["group"]
@@ -126,7 +126,8 @@ class VirtualOrganisation(_ControllerBase):
         ref = self.virtual_organisations_api.list_vo_roles()
         ref = [self.filter_params(x) for x in ref]
 
-        #print "Ioram K"
+        #Ioram 31/10/2014
+        #print "Ioram K List VO Roles"
         vo_role_list = []
 	for vo in ref:
 	    roles = context.get('environment').get('KEYSTONE_AUTH_CONTEXT').get('roles', {})
@@ -134,7 +135,7 @@ class VirtualOrganisation(_ControllerBase):
 	        try:
 	            self.check_vo_membership_status(context, vo["id"])
 		    vo_role_list.append(vo)
-                    print "===== VO: "+vo["vo_name"]+" VO_ID: "+vo["id"]
+                    #print "IORAM> ===== VO: "+vo["vo_name"]+" VO_ID: "+vo["id"]
 	        except Exception as e:
 		    pass
             else:
@@ -156,8 +157,8 @@ class VirtualOrganisation(_ControllerBase):
 
     @controller.protected()
     def update_vo_role(self, context, vo_role_id, vo_role):
-        print "NEW VALUESSSSSSSSSSSS"
-        print vo_role
+        #print "NEW VALUESSSSSSSSSSSS"
+        #print vo_role
         virtual_organisation_role = self._normalize_dict(vo_role)
         VirtualOrganisation.check_immutable_params(virtual_organisation_role)
         vo_role_ref = self.virtual_organisations_api.update_vo_role(vo_role_id, virtual_organisation_role)
@@ -189,18 +190,28 @@ class VirtualOrganisation(_ControllerBase):
         #print "IORAM > 2"
         fed_users = [] 
         vo_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
+	#print "====="
+        #print "IORAM * VO_Ref ok"
+
         try:
             mappings = self.federation_api.list_mappings()
+            #print "IORAM * Mappings ok"
             for mapping in mappings:
                 rules = mapping.get("rules", None)
+                #print "IORAM * Rules ok"
                 for rule in json.loads(rules):
                     local = rule.get("local")
+                    #print "IORAM * Local ok"
                     for att in local:
                         if(att.get("group") is not None):
+                            #print "IORAM * Group Ok"
                             if vo_ref["group_id"] in att.get("group").get("id"):
                                 fed_users.append(rule.get("remote")[0]["any_one_of"][0])
+                                #print "IORAM * Append "+rule.get("remote")[0]["any_one_of"][0]+" Ok"
+	    #print "====="
         except Exception as e:
-            print e
+            #print "IORAM Exception"
+            #print e
         users = self.identity_api.list_users_in_group(vo_ref["group_id"])
         for user in users:
             user["idp"] = "LOCAL"
@@ -266,23 +277,23 @@ class VirtualOrganisation(_ControllerBase):
         given_pin = vo_request.get("secret", None)
 
 	#Ioram 29/10/2014
-	print "IORAM> VO_Name: "+vo_request.get("vo_name")+" VO_Role: "+vo_request.get("vo_role")
+	#print "IORAM> VO_Name: "+vo_request.get("vo_name")+" VO_Role: "+vo_request.get("vo_role")
         vo_ref = self.virtual_organisations_api.get_vo_role_by_name_and_role(vo_request.get("vo_name"), vo_request.get("vo_role"))
-	if vo_ref:
-	    print "IORAM> VO_REF exists"
+	#if vo_ref:
+	    #print "IORAM> VO_REF exists"
         if not vo_ref:
-	    print "IORAM> VO_REF does not exist"
+	    #print "IORAM> VO_REF does not exist"
       	    #print "IORAM>==========================="
             raise exception.NotFound("The VO Role %s was not found in VO" % vo_request.get("vo_role"))
             #raise exception.NotFound("The VO Role %s was not found for VO %s" % vo_request.get("vo_role"), vo_request.get("vo_name"))
 	    #print "IORAM>==========================="
 
         required_pin = vo_ref.get("pin")
-        print "IORAM> Required PIN: "+vo_ref.get("pin")+" Given PIN: "+given_pin
+        #print "IORAM> Required PIN: "+vo_ref.get("pin")+" Given PIN: "+given_pin
         vo_request = self.virtual_organisations_api.get_request_for_user(token_ref["user"]["id"], vo_ref["id"])
-        print "IORAM> Get Request for User"
+        #print "IORAM> Get Request for User"
         if (vo_request):
-            print "IORAM> VO Request is Forbidden (Already requested to join this VO)"
+            #print "IORAM> VO Request is Forbidden (Already requested to join this VO)"
             raise exception.Forbidden("You have already requested to join this VO")
         blacklist_ref = self.virtual_organisations_api.get_vo_blacklist_for_user(token_ref["user"]["id"], vo_ref["id"], idp)
         if blacklist_ref:
@@ -355,14 +366,14 @@ class VirtualOrganisation(_ControllerBase):
 
 
     def resign_from_role(self, context, vo_role_id):
-	print "==========Resign_From_Role============="
+	#print "==========Resign_From_Role============="
         token_id = context['token_id']
         response = self.token_provider_api.validate_token(token_id)
         # For V3 tokens, the essential data is under the 'token' value.
         # For V2, the comparable data was nested under 'access'.
         token_ref = response.get('token', response.get('access'))
         user_id = token_ref["user"]["id"]
-        print "==== USERID = " + user_id
+        #print "==== USERID = " + user_id
         if "OS-FEDERATION" in token_ref["user"]:
             idp = token_ref.get("user").get("OS-FEDERATION").get("identity_provider")
         else:
