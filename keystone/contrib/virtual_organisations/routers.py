@@ -148,6 +148,13 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
             self._construct_url('vo_roles/{vo_role_id}/requests/{vo_request_id}'),
             controller=vo_request_controller,
             action='approve_vo_request',
+            conditions=dict(method=['HEAD']))
+
+	# Duplicate for SAML work (bug)
+        mapper.connect(
+            self._construct_url('vo_roles/{vo_role_id}/requests/{vo_request_id}'),
+            controller=vo_request_controller,
+            action='approve_vo_request',
             conditions=dict(method=['GET']))
 
         # ADMIN API blacklist Management

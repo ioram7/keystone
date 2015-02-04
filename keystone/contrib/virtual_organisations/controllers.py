@@ -196,8 +196,24 @@ class VirtualOrganisation(_ControllerBase):
         try:
             mappings = self.federation_api.list_mappings()
             #print "IORAM * Mappings ok"
+	    #print mappings
+	    #print "******"
             for mapping in mappings:
-                rules = mapping.get("rules", None)
+		mapping_id = mapping.get("id", None)
+
+		# Search which IdP this mapping belong
+		idps = self.federation_api.list_idps()
+		map_idp = "<Unknown_IdP>";
+		for idp in idps:
+			prots = self.federation_api.list_protocols(idp.get("id"))
+			# Considering each IdP has only one protocol.
+			if prots[0].get("mapping_id") == mapping_id:
+				map_idp = idp.get("id")
+		#print "IORAM * Map IdP ok"
+		#print map_idp
+	        #print "******"
+
+		rules = mapping.get("rules", None)
                 #print "IORAM * Rules ok"
                 for rule in json.loads(rules):
                     local = rule.get("local")
@@ -206,8 +222,10 @@ class VirtualOrganisation(_ControllerBase):
                         if(att.get("group") is not None):
                             #print "IORAM * Group Ok"
                             if vo_ref["group_id"] in att.get("group").get("id"):
-                                fed_users.append(rule.get("remote")[0]["any_one_of"][0])
-                                #print "IORAM * Append "+rule.get("remote")[0]["any_one_of"][0]+" Ok"
+				usr = {}
+				usr["id"] = rule.get("remote")[0]["any_one_of"][0]
+				usr["idp"] = map_idp
+                                fed_users.append(usr)
 	    #print "====="
         except Exception as e:
             pass
@@ -422,7 +440,7 @@ class VirtualOrganisationRequest(_ControllerBase):
     @controller.protected()
     def list_vo_requests(self, context, vo_role_id):
 	# Ioram 29/10/2014
-        #print "IORAM > 4"
+        #print "IORAM > 4 List VO Requests"
         LOG.warning(vo_role_id)
         ref = self.virtual_organisations_api.list_vo_requests(vo_role_id)
         return VirtualOrganisationRequest.wrap_collection(context, ref)
@@ -443,10 +461,13 @@ class VirtualOrganisationRequest(_ControllerBase):
         
             self.virtual_organisations_api.delete_vo_request(vo_request_id)
             return
+
+	print "IORAM 2015-02-03> Approve_VO_Request"
         # Get the mapping for idp / protocol
         protocols = self.federation_api.list_protocols(ref["idp"])
-        protocol = self.federation_api.get_protocol(ref["idp"], "saml2")
-        mapping = self.federation_api.get_mapping(protocol.get("mapping_id"))
+	# Gets the mapping for the first entry of the protocols object (each idp should have only one protocol/entry)
+        mapping = self.federation_api.get_mapping(protocols[0].get("mapping_id"))
+
         # Find which attribute maps to user id
         rules = mapping.get("rules", None)
         for rule in json.loads(rules):
