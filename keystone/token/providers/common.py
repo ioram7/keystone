@@ -421,6 +421,10 @@ class BaseProvider(provider.Provider):
             token_ref = self._handle_saml2_tokens(auth_context, project_id,
                                                   domain_id)
 
+        if 'abfab' in method_names:
+            token_ref = self._handle_abfab_tokens(auth_context, project_id,
+                                                  domain_id)
+
         access_token = None
         if 'oauth1' in method_names:
             if self.oauth_api:
@@ -470,6 +474,38 @@ class BaseProvider(provider.Provider):
             token_data['user'][federation.FEDERATION].update({
                 'groups': [{'id': x} for x in group_ids]
             })
+	print "Ioram> 2015-02-04"
+	print token_data
+	print "**************"
+        return token_data
+
+    def _handle_abfab_tokens(self, auth_context, project_id, domain_id):
+        user_id = auth_context['user_id']
+        group_ids = auth_context['group_ids']
+        idp = auth_context[federation.IDENTITY_PROVIDER]
+        protocol = auth_context[federation.PROTOCOL]
+        token_data = {
+            'user': {
+                'id': user_id,
+                'name': parse.unquote(user_id),
+                federation.FEDERATION: {
+                    'identity_provider': {'id': idp},
+                    'protocol': {'id': protocol}
+                }
+            }
+        }
+
+        if project_id or domain_id:
+            roles = self.v3_token_data_helper._populate_roles_for_groups(
+                group_ids, project_id, domain_id, user_id)
+            token_data.update({'roles': roles})
+        else:
+            token_data['user'][federation.FEDERATION].update({
+                'groups': [{'id': x} for x in group_ids]
+            })
+	print "Ioram> 2015-02-04"
+	print token_data
+	print "**************"
         return token_data
 
     def _verify_token_ref(self, token_ref):
