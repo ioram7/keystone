@@ -266,6 +266,10 @@ class DomainV3(controller.V3Controller):
         auth_context = context['environment'][authorization.AUTH_CONTEXT_ENV]
         domains = self.assignment_api.list_domains_for_groups(
             auth_context['group_ids'])
+	#Ioram 2015-02-04
+	#print "Ioram> 2015-02-04"
+	#print domains
+	#print "**!**!**"
         return DomainV3.wrap_collection(context, domains)
 
 
@@ -289,4 +293,8 @@ class ProjectV3(controller.V3Controller):
         auth_context = context['environment'][authorization.AUTH_CONTEXT_ENV]
         projects = self.assignment_api.list_projects_for_groups(
             auth_context['group_ids'])
+	#Ioram 2015-02-04
+	#print "Ioram> 2015-02-04"
+	#print projects
+	#print "**!**!**"
         return ProjectV3.wrap_collection(context, projects)
