@@ -23,7 +23,7 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
         ADMIN CRUD ON VO ROLES
         ----------------------
         PUT /OS-FEDERATION/vo_roles #
-        GET /OS-FEDERATION/vo_roles #
+        GET /OS-FEDERATION/vo_roles/all # List all VO Roles
         GET /OS-FEDERATION/vo_roles/$vo_role #
         DELETE /OS-FEDERATION/vo_roles/$vo_role #
         PATCH /OS-FEDERATION/vo_roles/$vo_role #
@@ -49,6 +49,7 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
 
         USER API for membership
         -----------------------
+        GET /OS-FEDERATION/vo_roles - list vo_roles assigned to the user
         PUT /OS-FEDERATION/vo_users - join VO
         GET /OS-FEDERATION/vo_roles/$vo_role_id/users - check status
         DELETE /OS-FEDERATION/vo_roles/$vo_role_id/members
@@ -76,7 +77,7 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
             conditions=dict(method=['POST']))
 
         mapper.connect(
-            self._construct_url('vo_roles'),
+            self._construct_url('vo_roles/all'),
             controller=vo_controller,
             action='list_vo_roles',
             conditions=dict(method=['GET']))
@@ -171,6 +172,12 @@ class VirtualOrganisationExtension(wsgi.ExtensionRouter):
             conditions=dict(method=['DELETE']))
 
         # USER API
+        mapper.connect(
+            self._construct_url('vo_roles'),
+            controller=vo_controller,
+            action='list_my_vo_roles',
+            conditions=dict(method=['GET']))
+
         mapper.connect(
             self._construct_url('vo_users'),
             controller=vo_controller,

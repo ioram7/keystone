@@ -205,6 +205,11 @@ class RuleProcessor(object):
             direct_maps = self._verify_all_requirements(rule['remote'],
                                                         assertion)
 
+	    #Ioram 2015-02-04
+	    #print "Ioram 2015-02-04> Direct Maps"
+	    #print direct_maps
+	    #print "DDDDDDDDDDDDDDDD"
+
             # If the compare comes back as None, then the rule did not apply
             # to the assertion data, go on to the next rule
             if direct_maps is None:
@@ -219,6 +224,8 @@ class RuleProcessor(object):
                 for local in rule['local']:
                     new_local = self._update_local_mapping(local, direct_maps)
                     identity_values.append(new_local)
+	    #print identity_values
+	    #print "IIIIIIIIIIIIIIIIII"
 
         mapped_properties = self._transform(identity_values)
         if mapped_properties.get('name') is None:
@@ -337,6 +344,12 @@ class RuleProcessor(object):
         :returns: list of direct mappings or None.
 
         """
+	#Ioram 2015-02-04
+	#print "Ioram 2015-02-04> Assertion & Requirements"
+	#print assertion
+	#print "A-A-A"
+	#print requirements
+	#print "R-R-R"
 
         direct_maps = []
 
@@ -371,6 +384,9 @@ class RuleProcessor(object):
             direct_map_values = assertion.get(requirement_type)
             if direct_map_values:
                 direct_maps += direct_map_values
+
+	#print direct_maps
+	#print "D-D-D"
 
         return direct_maps
 

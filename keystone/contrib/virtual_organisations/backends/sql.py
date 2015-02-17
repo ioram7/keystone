@@ -130,6 +130,14 @@ class VirtualOrganisation(core.Driver):
         vo_roles_list = [vo_role.to_dict() for vo_role in vo_roles]
         return vo_roles_list
 
+    def list_my_vo_roles(self):
+        session = sql.get_session()
+        with session.begin():
+            vo_roles = session.query(VirtualOrganisationRoleModel)
+        vo_roles_list = [vo_role.to_dict() for vo_role in vo_roles]
+        return vo_roles_list
+#	return list_vo_roles(self)
+
     def get_vo_role(self, vo_role_id):
         session = sql.get_session()
         vo_role_ref = self._get_vo_role(session, vo_role_id)

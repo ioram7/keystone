@@ -95,11 +95,9 @@ class VirtualOrganisation(_ControllerBase):
             virtual_organisation_role["vo_is_domain"] = False
         VirtualOrganisation.check_immutable_params(virtual_organisation_role)
         domain = None
-        if virtual_organisation_role.get("vo_is_domain", False):
-            
+        if virtual_organisation_role.get("vo_is_domain", False):            
             context["query_string"] = {"name":virtual_organisation_role["vo_name"]}
             domains = domain_api.list_domains(context)['domains']
-            #print domains
             if len(domains) == 1:
                 domain = domains.pop()
             elif len(domains) > 1:
@@ -108,16 +106,38 @@ class VirtualOrganisation(_ControllerBase):
                 domain = domain_api.create_domain(context, {"name":virtual_organisation_role["vo_name"]})
         group_ref = {"name":virtual_organisation_role["vo_name"]+"."+virtual_organisation_role["vo_role"]}
         if domain.get('domain', None):
-            #print domain
             group_ref = {"name":virtual_organisation_role["vo_role"]}
             group_ref["domain_id"] = domain["domain"]["id"] 
         elif domain:
-            #print domain
             group_ref = {"name":virtual_organisation_role["vo_role"]}
             group_ref["domain_id"] = domain["id"]
         group = group_api.create_group(context, group_ref)["group"]
         virtual_organisation_role["group_id"] = group["id"];
         vo_role_ref = self.virtual_organisations_api.create_vo_role(vo_role_id, virtual_organisation_role)
+
+	## Get user references to add to the VO Role
+
+	# Get the token id from the context
+        token_id = context['token_id']
+        if not token_id:
+            token_id = context['subject_token_id']
+	
+	# Get the token from the token_id
+        response = self.token_provider_api.validate_token(token_id)
+
+        # For V3 tokens, the essential data is under the 'token' value.
+        # For V2, the comparable data was nested under 'access'.
+        token_ref = response.get('token', response.get('access'))
+
+	# Set IdP Name
+        try:
+            idp = token_ref["user"]["OS-FEDERATION"]["identity_provider"]["id"]
+        except KeyError:
+            idp = "LOCAL"
+
+	# Add owner to VO Role
+	self._add_user_to_vo_role(vo_role_id, token_ref["user"]["id"], idp)
+
         response = VirtualOrganisation.wrap_member(context, vo_role_ref)
         return wsgi.render_response(body=response, status=('201', 'Created'))
 
@@ -125,23 +145,7 @@ class VirtualOrganisation(_ControllerBase):
     def list_vo_roles(self, context):
         ref = self.virtual_organisations_api.list_vo_roles()
         ref = [self.filter_params(x) for x in ref]
-
-        #Ioram 31/10/2014
-        #print "Ioram K List VO Roles"
-        vo_role_list = []
-	for vo in ref:
-	    roles = context.get('environment').get('KEYSTONE_AUTH_CONTEXT').get('roles', {})
-	    if not context.get("is_admin") and not 'admin' in roles:
-	        try:
-	            self.check_vo_membership_status(context, vo["id"])
-		    vo_role_list.append(vo)
-                    #print "IORAM> ===== VO: "+vo["vo_name"]+" VO_ID: "+vo["id"]
-	        except Exception as e:
-		    pass
-            else:
-                vo_role_list = ref
-
-        return VirtualOrganisation.wrap_collection(context, vo_role_list)
+        return VirtualOrganisation.wrap_collection(context, ref)
 
     @controller.protected()
     def get_vo_role(self, context, vo_role_id):
@@ -150,8 +154,19 @@ class VirtualOrganisation(_ControllerBase):
 
     @controller.protected()
     def delete_vo_role(self, context, vo_role_id):
+	# Get reference to VO Role
+        ref         = self.virtual_organisations_api.get_vo_role(vo_role_id)
+
+        # Remove users from the VO Role
+        members = self._list_vo_roles_members(vo_role_id)
+        members = members.get("members")
+        for member in members:
+	     user_id = member.get("id")
+	     idp = member.get("idp")
+             self._remove_vo_role_membership_from_user(vo_role_id, idp, user_id)
+
+	# Remove the VO Role
         group_api = identity.GroupV3()
-        ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
         self.virtual_organisations_api.delete_vo_role(vo_role_id)
         group_api.delete_group(context,ref["group_id"])
 
@@ -167,17 +182,53 @@ class VirtualOrganisation(_ControllerBase):
     # ADMIN Membership management
     @controller.protected()
     def add_user_to_vo_role(self, context, vo_role_id, user_id):
-        self._add_user_to_vo_role(vo_role_id, user_id)
+        self._add_user_to_vo_role(vo_role_id, user_id, "LOCAL")
 
-    def _add_user_to_vo_role(self,vo_role_id, user_id):
+    def _add_user_to_vo_role(self,vo_role_id, user_id, idp):
+
+	# Get the reference for the VO Role
         vo_role_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
-        self.identity_api.add_user_to_group(user_id=user_id, group_id=vo_role_ref["group_id"])
+
+	# If IDP in request is local, add the user to the Group which represent the VO Role.
+        if idp == "LOCAL":
+            self.identity_api.add_user_to_group(user_id=user_id, group_id=vo_role_ref["group_id"])
+            return
+
+	# Else... (Federated IdP)
+
+        # Get the mapping for idp / protocol (protocols table)
+        protocols = self.federation_api.list_protocols(idp)
+
+	# Gets the mapping for the first entry of the protocols object (each idp should have only one protocol/entry)
+        mapping = self.federation_api.get_mapping(protocols[0].get("mapping_id"))
+
+        # Find which attribute maps to user id
+        rules = mapping.get("rules", None)
+        for rule in json.loads(rules):
+            local = rule.get("local")
+            for att in local:
+                if att.get("user") is not None:
+                    if att.get("user").get("name") is not None:
+                        att_type = rule.get("remote")[0]["type"]
+        if not att_type:
+            raise Exception("Mapping must contain a user name attribute type")
+
+        # Insert entry in mapping table
+        new_rule = {}
+        new_rule[u'local'] = [{'group':{'id': vo_role_ref['group_id']}}]
+        new_rule[u'remote'] = [{'type': att_type, 'any_one_of': [user_id]}]
+        rules = json.loads(mapping["rules"])
+        rules.append(new_rule)
+        mapping["rules"] = rules
+        self.federation_api.update_mapping(mapping["id"], mapping)
+
+	return # End of _add_user_to_vo_role
+
 
     @controller.protected()
     def list_vo_roles_members(self, context, vo_role_id):
-	# Ioram 29/10/2014
-        #print "IORAM > 1"
         roles = context.get('environment').get('KEYSTONE_AUTH_CONTEXT').get('roles', {})
+        #Only admins can see members of all VO Roles! This is a hack...
         if not context.get("is_admin") and not 'admin' in roles:
             try:
                 self.check_vo_membership_status(context, vo_role_id)
@@ -186,18 +237,11 @@ class VirtualOrganisation(_ControllerBase):
         return self._list_vo_roles_members(vo_role_id)
 
     def _list_vo_roles_members(self, vo_role_id):
-	# Ioram 29/10/2014
-        #print "IORAM > 2"
         fed_users = [] 
         vo_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
-	#print "====="
-        #print "IORAM * VO_Ref ok"
 
         try:
             mappings = self.federation_api.list_mappings()
-            #print "IORAM * Mappings ok"
-	    #print mappings
-	    #print "******"
             for mapping in mappings:
 		mapping_id = mapping.get("id", None)
 
@@ -209,28 +253,19 @@ class VirtualOrganisation(_ControllerBase):
 			# Considering each IdP has only one protocol.
 			if prots[0].get("mapping_id") == mapping_id:
 				map_idp = idp.get("id")
-		#print "IORAM * Map IdP ok"
-		#print map_idp
-	        #print "******"
 
 		rules = mapping.get("rules", None)
-                #print "IORAM * Rules ok"
                 for rule in json.loads(rules):
                     local = rule.get("local")
-                    #print "IORAM * Local ok"
                     for att in local:
                         if(att.get("group") is not None):
-                            #print "IORAM * Group Ok"
                             if vo_ref["group_id"] in att.get("group").get("id"):
 				usr = {}
 				usr["id"] = rule.get("remote")[0]["any_one_of"][0]
 				usr["idp"] = map_idp
                                 fed_users.append(usr)
-	    #print "====="
         except Exception as e:
             pass
-            #print "IORAM Exception"
-            #print e
         users = self.identity_api.list_users_in_group(vo_ref["group_id"])
         for user in users:
             user["idp"] = "LOCAL"
@@ -239,8 +274,6 @@ class VirtualOrganisation(_ControllerBase):
 
     @controller.protected()
     def get_vo_role_member(self, context, vo_role_id, user_id):
-	# Ioram 29/10/2014
-        #print "IORAM > 3"
         vo_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
         users = self.identity_api.list_users_in_group(vo_ref["group_id"])
         for user in users:
@@ -280,41 +313,57 @@ class VirtualOrganisation(_ControllerBase):
         self.virtual_organisations_api.get_vo_role(vo_role_id)
 
     # User API
+    @controller.protected()
+    def list_my_vo_roles(self, context):
+        ref = self.virtual_organisations_api.list_my_vo_roles()
+        ref = [self.filter_params(x) for x in ref]
+
+        vo_role_list = []
+	for vo in ref:
+	    try:
+	        self.check_vo_membership_status(context, vo["id"])
+	        vo_role_list.append(vo)
+	    except Exception as e:
+	        pass
+
+        return VirtualOrganisation.wrap_collection(context, vo_role_list)
+
     def join_vo_role(self, context, vo_request):
+	# Get the token id from the context
         token_id = context['token_id']
         if not token_id:
             token_id = context['subject_token_id']
+	
+	# Get the token from the token_id
         response = self.token_provider_api.validate_token(token_id)
+
         # For V3 tokens, the essential data is under the 'token' value.
         # For V2, the comparable data was nested under 'access'.
         token_ref = response.get('token', response.get('access'))
-        # Check the PIN
+
+	# Set IdP Name
         try:
             idp = token_ref["user"]["OS-FEDERATION"]["identity_provider"]["id"]
         except KeyError:
             idp = "LOCAL"
-        given_pin = vo_request.get("secret", None)
 
-	#Ioram 29/10/2014
-	#print "IORAM> VO_Name: "+vo_request.get("vo_name")+" VO_Role: "+vo_request.get("vo_role")
+	# Get the VO and VO Role references
         vo_ref = self.virtual_organisations_api.get_vo_role_by_name_and_role(vo_request.get("vo_name"), vo_request.get("vo_role"))
 	if vo_ref:
 	    pass
-	    #print "IORAM> VO_REF exists"
         if not vo_ref:
-	    #print "IORAM> VO_REF does not exist"
-      	    #print "IORAM>==========================="
             raise exception.NotFound("The VO Role %s was not found in VO" % vo_request.get("vo_role"))
-            #raise exception.NotFound("The VO Role %s was not found for VO %s" % vo_request.get("vo_role"), vo_request.get("vo_name"))
-	    #print "IORAM>==========================="
 
+	# Set the PIN from the user's request and the PIN from the VO Role table.
+        given_pin = vo_request.get("secret", None)
         required_pin = vo_ref.get("pin")
-        #print "IORAM> Required PIN: "+vo_ref.get("pin")+" Given PIN: "+given_pin
+
+	# Verify if there is already a request in the database
         vo_request = self.virtual_organisations_api.get_request_for_user(token_ref["user"]["id"], vo_ref["id"])
-        #print "IORAM> Get Request for User"
         if (vo_request):
-            #print "IORAM> VO Request is Forbidden (Already requested to join this VO)"
             raise exception.Forbidden("You have already requested to join this VO")
+
+	# Verify if the user is blacklisted
         blacklist_ref = self.virtual_organisations_api.get_vo_blacklist_for_user(token_ref["user"]["id"], vo_ref["id"], idp)
         if blacklist_ref:
             count = blacklist_ref["count"]
@@ -324,28 +373,31 @@ class VirtualOrganisation(_ControllerBase):
                                           "your administrator to ask for your "
                                           "account to be unlocked.")
 
+
+        # Verify if the PIN is correct
         if(given_pin == required_pin or required_pin == ""):
-            if blacklist_ref:
+            if blacklist_ref: # Reset blacklist counter
                 self.virtual_organisations_api.delete_vo_blacklist(blacklist_ref["id"])
             vo_role_ref = self.virtual_organisations_api.get_vo_role(vo_ref["id"])
             status = "pending"
+
             if vo_role_ref["automatic_join"]:
-                self._add_user_to_vo_role(vo_ref["id"], token_ref["user"]["id"])
+                self._add_user_to_vo_role(vo_ref["id"], token_ref["user"]["id"], idp)
                 status = "approved"
             else:
+		# Create a new object for the VO Request
                 vo_request_ref = {}
                 vo_request_ref["id"] = uuid.uuid4().hex
                 vo_request_ref["user_id"] = token_ref["user"]["id"]
                 vo_request_ref["vo_role_id"] = vo_ref["id"]
                 vo_request_ref["idp"] = idp
-                if idp is None:
-                   vo_request_ref["idp"] = "LOCAL"
+		# Create VO Request in database
                 ref = self.virtual_organisations_api.create_vo_request(vo_request_ref["id"], vo_request_ref)
             resp = {}
             resp["vo_name"] = vo_role_ref["vo_name"]
             resp["status"] = status
             return {"vo_request":resp}
-        else:            
+        else:
             if blacklist_ref:
                 blacklist_ref["count"]+=1L
                 self.virtual_organisations_api.update_vo_blacklist(blacklist_ref["id"], blacklist_ref)
@@ -365,6 +417,7 @@ class VirtualOrganisation(_ControllerBase):
         token_id = context['token_id']
         response = self.token_provider_api.validate_token(token_id)
         roles = context.get('environment').get('KEYSTONE_AUTH_CONTEXT').get('roles', {})
+	# Admins are in all VO Roles! This is a hack...
         if context.get("is_admin") or 'admin' in roles:
             return {"status":"approved"}
         # For V3 tokens, the essential data is under the 'token' value.
@@ -439,32 +492,41 @@ class VirtualOrganisationRequest(_ControllerBase):
     # Request API
     @controller.protected()
     def list_vo_requests(self, context, vo_role_id):
-	# Ioram 29/10/2014
-        #print "IORAM > 4 List VO Requests"
-        LOG.warning(vo_role_id)
+        #LOG.warning(vo_role_id)
         ref = self.virtual_organisations_api.list_vo_requests(vo_role_id)
         return VirtualOrganisationRequest.wrap_collection(context, ref)
 
     @controller.protected()
     def decline_vo_request(self, context, vo_role_id, vo_request_id):
-        LOG.warning(vo_role_id)
-        LOG.warning(vo_request_id)
+        #LOG.warning(vo_role_id)
+        #LOG.warning(vo_request_id)
         self.virtual_organisations_api.delete_vo_request(vo_request_id)
 
+    @controller.protected()
     def approve_vo_request(self, context, vo_role_id, vo_request_id):
+	# Get the references for the VO Request and VO Role
         ref = self.virtual_organisations_api.get_vo_request(vo_request_id)
-        LOG.warning(ref)
-        # Do some assignment here
-        vo_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
-        if ref["idp"] == "LOCAL":
-            self.identity_api.add_user_to_group(user_id=ref["user_id"], group_id=vo_ref["group_id"])
-        
-            self.virtual_organisations_api.delete_vo_request(vo_request_id)
+        #LOG.warning(ref)
+	# Add user to the role
+        self._add_user_to_vo_role(ref["vo_role_id"], ref["user_id"], ref["idp"])
+	# Delete the request
+        self.virtual_organisations_api.delete_vo_request(vo_request_id)
+
+    def _add_user_to_vo_role(self,vo_role_id, user_id, idp):
+
+	# Get the reference for the VO Role
+        vo_role_ref = self.virtual_organisations_api.get_vo_role(vo_role_id)
+
+	# If IDP in request is local, add the user to the Group which represent the VO Role.
+        if idp == "LOCAL":
+            self.identity_api.add_user_to_group(user_id=user_id, group_id=vo_role_ref["group_id"])
             return
 
-	print "IORAM 2015-02-03> Approve_VO_Request"
-        # Get the mapping for idp / protocol
-        protocols = self.federation_api.list_protocols(ref["idp"])
+	# Else... (Federated IdP)
+
+        # Get the mapping for idp / protocol (protocols table)
+        protocols = self.federation_api.list_protocols(idp)
+
 	# Gets the mapping for the first entry of the protocols object (each idp should have only one protocol/entry)
         mapping = self.federation_api.get_mapping(protocols[0].get("mapping_id"))
 
@@ -479,17 +541,17 @@ class VirtualOrganisationRequest(_ControllerBase):
         if not att_type:
             raise Exception("Mapping must contain a user name attribute type")
 
-        # Insert mapping        
+        # Insert entry in mapping table
         new_rule = {}
-        new_rule[u'local'] = [{'group':{'id': vo_ref['group_id']}}]
-        new_rule[u'remote'] = [{'type': att_type, 'any_one_of': [ref['user_id']]}]
+        new_rule[u'local'] = [{'group':{'id': vo_role_ref['group_id']}}]
+        new_rule[u'remote'] = [{'type': att_type, 'any_one_of': [user_id]}]
         rules = json.loads(mapping["rules"])
         rules.append(new_rule)
         mapping["rules"] = rules
         self.federation_api.update_mapping(mapping["id"], mapping)
 
-        # Delete request
-        self.virtual_organisations_api.delete_vo_request(vo_request_id)
+	return # End of _add_user_to_vo_role
+
 
 @dependency.requires('virtual_organisations_api')
 class VirtualOrganisationBlackList(_ControllerBase):

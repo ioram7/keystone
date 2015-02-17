@@ -86,6 +86,14 @@ class Driver(object):
         """
         raise exception.NotImplemented()
 
+    def list_my_vo_roles(self):
+        """List VO roles assigned to the user.
+
+        :raises: keystone.exception.VirtualOrganisationRoleNotFound
+
+        """
+        raise exception.NotImplemented()
+
     def get_vo_role(self, vo_role_id):
         """Get an VO role by ID.
 
