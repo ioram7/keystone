@@ -130,7 +130,7 @@ class VirtualOrganisation(core.Driver):
         vo_roles_list = [vo_role.to_dict() for vo_role in vo_roles]
         return vo_roles_list
 
-    def list_my_vo_roles(self):
+    def list_my_vo_roles(self, user_id, idp):
         session = sql.get_session()
         with session.begin():
             vo_roles = session.query(VirtualOrganisationRoleModel)
@@ -146,9 +146,9 @@ class VirtualOrganisation(core.Driver):
     def get_vo_role_by_name_and_role(self, vo_name, vo_role):
         session = sql.get_session()
         q = session.query(VirtualOrganisationRoleModel)
-        print q.all()
+        #print q.all()
         q = q.filter_by(vo_name=vo_name, vo_role=vo_role)
-        print q
+        #print q
         vo_role_ref = q.first()
         if vo_role_ref is None:
             return None
@@ -214,12 +214,12 @@ class VirtualOrganisation(core.Driver):
                 setattr(vo_request_ref, attr, getattr(new_vo_request, attr))
         return vo_request_ref.to_dict()
 
-    def get_request_for_user(self, user_id, vo_role_id):
+    def get_request_for_user(self, user_id, vo_role_id, idp):
         session = sql.get_session()
         with session.begin():
-            vo_requests = session.query(VirtualOrganisationRequestModel).filter_by(user_id=user_id, vo_role_id=vo_role_id)
+            vo_requests = session.query(VirtualOrganisationRequestModel).filter_by(user_id=user_id, vo_role_id=vo_role_id, idp=idp)
         vo_requests_list = [vo_request.to_dict() for vo_request in vo_requests]
-        print len(vo_requests_list)
+        #print len(vo_requests_list)
         if len(vo_requests_list) == 0:
             return
         return vo_requests_list.pop()
@@ -241,6 +241,10 @@ class VirtualOrganisation(core.Driver):
             vo_blacklist_ref = self._get_vo_blacklist(session, vo_blacklist_id)
             q = session.query(VirtualOrganisationBlackListModel)
             q = q.filter_by(id=vo_blacklist_id)
+	    #print "qqqqqqqqqqqqqq"
+	    #print vo_blacklist_id
+	    #print q
+	    #print "qqqqqqqqqqqqqq"
             q.delete(synchronize_session=False)
             session.delete(vo_blacklist_ref)
 
@@ -252,16 +256,23 @@ class VirtualOrganisation(core.Driver):
 
     def list_vo_blacklists(self):
         session = sql.get_session()
+        #filter by count
         with session.begin():
-            vo_blacklists = session.query(VirtualOrganisationBlackListModel).filter_by(count > 3)
+            vo_blacklists = session.query(VirtualOrganisationBlackListModel).filter_by(count > 2)
         vo_blacklists_list = [vo_blacklist.to_dict() for vo_blacklist in vo_blacklists]
         return vo_blacklists_list
     
     def list_vo_blacklists_for_vo(self, vo_role_id):
         session = sql.get_session()
         with session.begin():
-            vo_blacklists = session.query(VirtualOrganisationBlackListModel).filter(VirtualOrganisationBlackListModel.count > 2)
-        vo_blacklists_list = [vo_blacklist.to_dict() for vo_blacklist in vo_blacklists]
+            #filter by vo_role
+            vo_blacklists = session.query(VirtualOrganisationBlackListModel).filter_by(vo_role_id=vo_role_id)
+#        vo_blacklists_list = [vo_blacklist.to_dict() for vo_blacklist in vo_blacklists]
+        vo_blacklists_list = []
+	for vo_blacklist in vo_blacklists:
+            #filter by count
+	    if vo_blacklist.get("count") > 2:
+                vo_blacklists_list.append(vo_blacklist.to_dict())
         return vo_blacklists_list
 
     def get_vo_blacklist_for_user(self, user_id, vo_role_id, idp):
@@ -269,7 +280,7 @@ class VirtualOrganisation(core.Driver):
         with session.begin():
             vo_blacklists = session.query(VirtualOrganisationBlackListModel).filter_by(user_id=user_id, vo_role_id=vo_role_id, idp=idp)
         vo_blacklists_list = [vo_blacklist.to_dict() for vo_blacklist in vo_blacklists]
-        print len(vo_blacklists_list)
+        #print len(vo_blacklists_list)
         if len(vo_blacklists_list) == 0:
             return
         return vo_blacklists_list.pop()

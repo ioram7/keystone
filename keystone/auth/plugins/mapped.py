@@ -41,6 +41,11 @@ class Mapped(auth.AuthMethodHandler):
         else:
             fields = self._handle_unscoped_token(context, auth_payload)
 
+	#Ioram 2015-02-04
+	#print "Ioram 2015-02-04> Fields"
+	#print fields
+	#print "*****"
+
         auth_context.update(fields)
 
     def _handle_scoped_token(self, auth_payload):
@@ -62,6 +67,7 @@ class Mapped(auth.AuthMethodHandler):
 
     def _handle_unscoped_token(self, context, auth_payload):
         user_id, assertion = self._extract_assertion_data(context)
+
         if user_id:
             assertion['user_id'] = user_id
         identity_provider = auth_payload['identity_provider']
@@ -84,14 +90,26 @@ class Mapped(auth.AuthMethodHandler):
     def _extract_assertion_data(self, context):
         assertion = dict(utils.get_assertion_params_from_env(context))
         user_id = context['environment'].get('REMOTE_USER')
+	#IORAM 2015-01-31 ### ENVIRONMENT
+	#print "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+	#print context['environment']
+	#print "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
         return user_id, assertion
 
     def _apply_mapping_filter(self, identity_provider, protocol, assertion):
         mapping = self.federation_api.get_mapping_from_idp_and_protocol(
             identity_provider, protocol)
         rules = jsonutils.loads(mapping['rules'])
+	#Ioram 2015-02-04
+	#print "Ioram 2015-02-04> Rules & Assertion"
+	#print rules
+	#print "*r*r*r"
+	#print assertion
+	#print "*a*a*a"
         rule_processor = utils.RuleProcessor(rules)
         mapped_properties = rule_processor.process(assertion)
+	#print mapped_properties
+	#print "*m*m*m"
         utils.validate_groups(mapped_properties['group_ids'],
                               mapping['id'], self.identity_api)
         return mapped_properties

@@ -647,10 +647,13 @@ class V3Controller(wsgi.Application):
             LOG.warning(_('RBAC: Bypassing authorization'))
         else:
             action = 'identity:%s' % prep_info['f_name']
+	    #print "=============CHECK_PROTECTION=============="
+	    #print action
             # TODO(henry-nash) need to log the target attributes as well
             creds = _build_policy_check_credentials(self, action,
                                                     context,
                                                     prep_info['input_attr'])
+	    #print creds
             # Build the dict the policy engine will check against from both the
             # parameters passed into the call we are protecting (which was
             # stored in the prep_info by protected()), plus the target
@@ -659,6 +662,8 @@ class V3Controller(wsgi.Application):
             if target_attr:
                 policy_dict = {'target': target_attr}
             policy_dict.update(prep_info['input_attr'])
+            #print utils.flatten_dict(policy_dict)
+	    #print "============================================"
             self.policy_api.enforce(creds,
                                     action,
                                     utils.flatten_dict(policy_dict))

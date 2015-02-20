@@ -474,9 +474,9 @@ class BaseProvider(provider.Provider):
             token_data['user'][federation.FEDERATION].update({
                 'groups': [{'id': x} for x in group_ids]
             })
-	print "Ioram> 2015-02-04"
-	print token_data
-	print "**************"
+	#print "Ioram> 2015-02-04"
+	#print token_data
+	#print "**************"
         return token_data
 
     def _handle_abfab_tokens(self, auth_context, project_id, domain_id):
@@ -503,9 +503,9 @@ class BaseProvider(provider.Provider):
             token_data['user'][federation.FEDERATION].update({
                 'groups': [{'id': x} for x in group_ids]
             })
-	print "Ioram> 2015-02-04"
-	print token_data
-	print "**************"
+	#print "Ioram> 2015-02-04"
+	#print token_data
+	#print "**************"
         return token_data
 
     def _verify_token_ref(self, token_ref):
